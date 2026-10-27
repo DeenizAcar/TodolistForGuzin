@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Güzin'in Odası ♡</title>
+<meta name="description" content="Buzdolabındaki yapılacaklar ve akşamları süslenen tatlı bir oda.">
+<meta name="theme-color" content="#fff4f8">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Güzin'in Odası">
+<script>(function(){try{var t=localStorage.getItem('oda_tema');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="app" class="app">
+  <header class="top">
+    <div class="brand">Güzin'in Odası <span class="beat">♡</span></div>
+    <div class="top-r">
+      <button class="chip" id="heartsBtn" aria-label="Kalplerin">♡ 0</button>
+      <button class="icon-btn" id="mailBtn" aria-label="Mektuplar">💌<span class="badge" id="mailBadge" hidden></span></button>
+      <button class="icon-btn" id="menuBtn" aria-label="Ayarlar">⋯</button>
+    </div>
+  </header>
+
+  <div class="body">
+    <main class="stage-wrap" id="stageWrap">
+      <svg id="room" viewBox="0 0 1000 900" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Güzin'in odası"></svg>
+      <div class="sel-bar" id="selBar" hidden></div>
+    </main>
+    <aside class="drawer" id="drawer" hidden>
+      <div class="dr-head">
+        <div><b>Dekorasyon ♡</b><div class="mut small">Eşyaya dokun, sürükleyip yerleştir</div></div>
+        <div class="dr-r"><span class="chip" id="drHearts">♡ 0</span><button class="b p" id="doneDesign">Bitti</button></div>
+      </div>
+      <div class="tabs" id="drTabs"></div>
+      <div class="dr-body" id="drBody"></div>
+    </aside>
+  </div>
+
+  <section class="today" id="today" role="button" tabindex="0" aria-label="Bugünün özeti"></section>
+  <nav class="dock">
+    <button class="dock-btn" id="fridgeBtn">🧊 Buzdolabı <span class="cnt" id="fridgeCnt" hidden></span></button>
+    <button class="dock-btn primary" id="decorBtn">🎨 Dekorasyon</button>
+  </nav>
+  <div class="local-note" id="localNote" hidden>Yerel mod · veriler sadece bu tarayıcıda</div>
+</div>
+
+<div class="sheet-back" id="sheetBack" hidden></div>
+
+<section class="sheet" id="sheet-fridge" hidden aria-label="Buzdolabı">
+  <div class="sheet-head"><h2>Buzdolabı ♡</h2><button class="x" data-close aria-label="Kapat">×</button></div>
+  <div class="fridge-door">
+    <div class="fr-prog" id="frProg"></div>
+    <div class="postits" id="postits"></div>
+  </div>
+  <form class="add-form" id="addForm" autocomplete="off">
+    <input id="addText" maxlength="90" placeholder="Bugün ne yapacaksın?" enterkeyhint="done">
+    <div class="add-row">
+      <div class="cdots" id="cdots"></div>
+      <label class="rep"><input type="checkbox" id="addRep"> ↻ Her gün</label>
+      <button class="b p" type="submit">Yapıştır</button>
+    </div>
+  </form>
+  <div class="done-list" id="doneList"></div>
+</section>
+<section class="sheet" id="sheet-info" hidden aria-label="Dekorasyon"></section>
+<section class="sheet" id="sheet-mail" hidden aria-label="Mektuplar"></section>
+<section class="sheet" id="sheet-menu" hidden aria-label="Ayarlar"></section>
+
+<div class="overlay" id="loading"><div class="ov-card"><div class="spin">♡</div><p>Oda hazırlanıyor...</p></div></div>
+<div class="overlay" id="login" hidden>
+  <div class="ov-card">
+    <div class="ov-art" id="loginArt"></div>
+    <h1>Güzin'in Odası <span class="beat">♡</span></h1>
+    <p>Telefonda ve bilgisayarda aynı oda için Google hesabınla gir.</p>
+    <button class="b p big" id="signInBtn">Google ile giriş yap</button>
+    <p class="small" id="loginErr"></p>
+  </div>
+</div>
+<div class="overlay" id="denied" hidden>
+  <div class="ov-card">
+    <h1>Kapı kilitli ♡</h1>
+    <p id="deniedMsg">Bu oda sadece Güzin ve Deniz için.</p>
+    <button class="b big" id="switchBtn">Başka hesapla gir</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

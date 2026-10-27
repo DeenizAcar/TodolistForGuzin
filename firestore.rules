@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// Firebase konsolu > Firestore Database > Kurallar (Rules) sekmesine yapıştır.
+// İki e-postayı kendi Google hesaplarınızla değiştir (küçük harfle).
+// Not: Bu dosya sadece şablon. Gerçek e-postaları buraya yazıp GitHub'a
+// göndermene gerek yok; konsolda düzenlemen yeterli.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isMember() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in ['GUZIN_EPOSTA@gmail.com', 'DENIZ_EPOSTA@gmail.com'];
+    }
+
+    match /rooms/{roomId} {
+      allow read, write: if isMember();
+    }
+  }
+}

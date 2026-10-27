@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Deniz Paneli ♡</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#fff4f8">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<script>(function(){try{var t=localStorage.getItem('oda_tema');if(t==='dark'||t==='light')document.documentElement.setAttribute('data-theme',t)}catch(e){}})();</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/deniz.css">
+</head>
+<body>
+<div class="dz">
+  <header class="top">
+    <div class="brand">Deniz Paneli <span class="beat">♡</span></div>
+    <div class="top-r" id="acct"></div>
+  </header>
+
+  <div class="dz-grid">
+    <section class="card" id="status"></section>
+
+    <section class="card">
+      <h2>Odası şu an</h2>
+      <svg id="room" viewBox="0 0 1000 900" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Güzin'in odası"></svg>
+    </section>
+
+    <section class="card">
+      <h2>Kapının altına mektup bırak 💌</h2>
+      <form id="noteForm" autocomplete="off">
+        <textarea id="nText" maxlength="2000" placeholder="Güzin'e yaz..." required></textarea>
+        <div class="row2">
+          <label>Hediye kalp
+            <select id="nHearts"><option value="0">Yok</option><option value="3">3 ♡</option><option value="5">5 ♡</option><option value="10">10 ♡</option><option value="20">20 ♡</option><option value="50">50 ♡</option></select>
+          </label>
+          <label>Hediye eşya
+            <select id="nItem"></select>
+          </label>
+        </div>
+        <div class="row2">
+          <label>Ne zaman görünsün?
+            <select id="nWhen"><option value="now">Hemen</option><option value="later">Şu tarihte...</option></select>
+          </label>
+          <label id="atWrap" hidden>Tarih ve saat
+            <input type="datetime-local" id="nAt">
+          </label>
+        </div>
+        <button class="b p big" type="submit">Kapının altına bırak ♡</button>
+        <p class="mut small" id="nMsg"></p>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>Mektuplar</h2>
+      <div id="notes"></div>
+    </section>
+
+    <section class="card">
+      <h2>Buzdolabı</h2>
+      <div id="todos"></div>
+      <form id="todoForm" class="inline" autocomplete="off">
+        <input id="tText" maxlength="90" placeholder="Buzdolabına sen de not yapıştır (D♡ imzalı)">
+        <button class="b p" type="submit">Yapıştır</button>
+      </form>
+    </section>
+  </div>
+  <p class="mut small" id="localNote" hidden style="text-align:center">Yerel mod · Güzin'in sayfasıyla aynı tarayıcıda denersen ikisi birbirini görür.</p>
+</div>
+
+<div class="overlay" id="loading"><div class="ov-card"><div class="spin">♡</div><p>Yükleniyor...</p></div></div>
+<div class="overlay" id="login" hidden>
+  <div class="ov-card">
+    <h1>Deniz Paneli <span class="beat">♡</span></h1>
+    <p>Odayı görmek ve mektup bırakmak için Google ile gir.</p>
+    <button class="b p big" id="signInBtn">Google ile giriş yap</button>
+    <p class="small" id="loginErr"></p>
+  </div>
+</div>
+<div class="overlay" id="denied" hidden>
+  <div class="ov-card">
+    <h1>Kapı kilitli</h1>
+    <p id="deniedMsg">Bu hesabın odaya erişimi yok.</p>
+    <button class="b big" id="switchBtn">Başka hesapla gir</button>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+
+<script type="module" src="js/deniz.js"></script>
+</body>
+</html>
