@@ -1,17 +1,14 @@
-// Firebase ayarları. README'deki adımları izleyip Firebase konsolundan
-// kopyaladığın nesneyi buraya yapıştır. null kaldıkça site "yerel mod"da
-// çalışır: veriler sadece o tarayıcıda durur, cihazlar arası eşitleme olmaz.
-//
-// Örnek:
-// export const firebaseConfig = {
-//   apiKey: "AIza...",
-//   authDomain: "guzinin-odasi.firebaseapp.com",
-//   projectId: "guzinin-odasi",
-//   storageBucket: "guzinin-odasi.appspot.com",
-//   messagingSenderId: "1234567890",
-//   appId: "1:1234567890:web:abc123"
-// };
-export const firebaseConfig = null;
+// Firebase projesi: guzinin-odasi (Firebase konsolu > Proje ayarları > Uygulamalar > oda).
+// Bu anahtarlar gizli değildir; odaya kimin girebileceğini Firestore kuralları belirler.
+// firebaseConfig = null yapılırsa site "yerel mod"da çalışır (veriler sadece o tarayıcıda).
+export const firebaseConfig = {
+  apiKey: "AIzaSyByS1nI67vTJblyWl6TUSeYCEuJLSA_MsQ",
+  authDomain: "guzinin-odasi.firebaseapp.com",
+  projectId: "guzinin-odasi",
+  storageBucket: "guzinin-odasi.firebasestorage.app",
+  messagingSenderId: "860546714284",
+  appId: "1:860546714284:web:add4648f17420d38daed09"
+};
 
 // Veritabanındaki oda belgesinin adı (rooms/guzin).
 export const ROOM_ID = 'guzin';
