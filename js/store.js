@@ -7,7 +7,7 @@
 // Her işlem sadece kendi alanına dokunduğu için iki cihaz aynı anda yazsa da
 // birbirinin verisini ezmez.
 
-import { firebaseConfig, ROOM_ID } from './config.js';
+import { firebaseConfig, ROOM_ID, LOCAL_MODE } from './config.js';
 
 export const INC = n => ({ __op: 'inc', n });
 export const DEL = { __op: 'del' };
@@ -15,7 +15,7 @@ export const DEL = { __op: 'del' };
 const FB = 'https://www.gstatic.com/firebasejs/10.12.2/';
 
 export async function createStore() {
-  return firebaseConfig ? cloudStore() : localStore();
+  return LOCAL_MODE ? localStore() : cloudStore();
 }
 
 const clone = v => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
@@ -55,6 +55,12 @@ function localStore() {
     },
     async apply(ops) {
       for (const [p, v] of ops) applyLocal(state, p, v);
+      write();
+      h.onState(clone(state));
+    },
+    // Bütün odayı verilen hale getirir (birleştirmeden, üstüne yazar).
+    async replace(data) {
+      state = clone(data);
       write();
       h.onState(clone(state));
     },
@@ -113,6 +119,9 @@ async function cloudStore() {
         o[parts[parts.length - 1]] = toFb(val);
       }
       return F.setDoc(ref, root, { merge: true }).catch(err => h.onError(err));
+    },
+    replace(data) {
+      return F.setDoc(ref, data).catch(err => h.onError(err));
     },
     async signIn() {
       const p = new A.GoogleAuthProvider();

@@ -1,6 +1,6 @@
 // Odanın kuralları: günler, notlar, kilit, mektuplar.
 
-import { firebaseConfig } from './config.js';
+import { LOCAL_MODE } from './config.js';
 
 export const pad = n => String(n).padStart(2, '0');
 export const dayKey = (d = new Date()) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -8,7 +8,7 @@ export const uid = () => Date.now().toString(36) + Math.random().toString(36).sl
 
 // Deneme için ?saat=21 ile saati değiştirmek sadece yerel modda çalışır.
 const qs = new URLSearchParams(location.search);
-const HOUR_OVERRIDE = !firebaseConfig && qs.has('saat') ? Number(qs.get('saat')) : null;
+const HOUR_OVERRIDE = LOCAL_MODE && qs.has('saat') ? Number(qs.get('saat')) : null;
 export const now = () => {
   const d = new Date();
   if (HOUR_OVERRIDE !== null && !Number.isNaN(HOUR_OVERRIDE)) d.setHours(HOUR_OVERRIDE);
@@ -45,6 +45,15 @@ export function hourAt(h) {
   const v = [...word].reverse().find(c => 'aeıioöuü'.includes(c));
   const hard = 'fstkçşhp'.includes(word[word.length - 1]);
   return `saat ${h}:00'${hard ? 't' : 'd'}${'aıou'.includes(v) ? 'a' : 'e'}`;
+}
+
+// Kapıdaki "Do not disturb" tabelası. Unutulursa 12 saat sonra kendiliğinden düşer.
+export const DND_MAX = 12 * 3600e3;
+export const dndActive = (S, t = Date.now()) => !!(S?.dnd?.since && t - S.dnd.since < DND_MAX);
+export function fmtDur(min) {
+  if (min < 60) return `${min} dk`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return m ? `${h} sa ${m} dk` : `${h} sa`;
 }
 
 export const BONUS_MIN = 3;

@@ -5,6 +5,8 @@ Buzdolabındaki post-it'lerle yapılacaklar listesi ve akşamları süslenen tat
 - **Buzdolabı:** Güzin günün yapacaklarını post-it olarak yapıştırır. Biten nota dokununca koparıp atar, **+1 ♡** kazanır. En az 3 notun hepsi bitince **+3 ♡** bonus gelir. "↻ Her gün" işaretli notlar her sabah yeniden çıkar.
 - **Dekorasyon:** Liste bitince **ve** akşam saati gelince (varsayılan 18:00) açılır. Kalplerle dükkandan eşya, duvar kağıdı ve zemin alınır, eşyalar sürükleyip yerleştirilir.
 - **Mektuplar:** Deniz panelden mektup yazar, içine kalp ya da sadece ondan gelen eşyalar (gül buketi, kalp balon, neon G ♡ D) koyar. Mektup kapının önünde zarf olarak belirir. İstersen ileri bir tarihe zamanlayabilirsin.
+- **Kapı tabelası:** Güzin ders çalışırken kapıdaki "Güzin" tabelasına dokunur, tabela sallanıp **DO NOT DISTURB** yüzüne döner. Deniz panelinde "ders çalışıyor, rahatsız etme" diye görünür. Unutulursa 12 saat sonra kendiliğinden düşer.
+- **Düzenle (Deniz paneli):** kalp sayısını ayarlama, odadaki ve depodaki eşyaları, alınan duvar kağıtlarını, notları ve mektupları silme, odayı ilk günkü haline döndürme.
 - **Oda yaşar:** Pencere gerçek saate göre sabah, gündüz, gün batımı ve gece olur. Gece lambalar yanar, duvar saati gerçek saati gösterir, buzdolabındaki küçük post-it'ler bitmemiş notları gösterir.
 
 | Sayfa | Adres |
@@ -78,7 +80,7 @@ Güzin'e linki vermeden önce Deniz panelinden bir **hoş geldin mektubu** bıra
 python -m http.server 5173
 ```
 
-Sonra <http://localhost:5173> (oda) ve <http://localhost:5173/deniz.html> (panel). Yerel modda iki sayfa aynı tarayıcıda birbirini görür. Saati denemek için adrese `?saat=21` eklenebilir (sadece yerel modda çalışır).
+Sonra <http://localhost:5173/?yerel> (oda) ve <http://localhost:5173/deniz.html?yerel> (panel). `?yerel` gerçek oda yerine bu tarayıcıda boş bir deneme odası açar, Firebase'e hiç dokunmaz; iki sayfa aynı tarayıcıda birbirini görür. Saati denemek için `?yerel&saat=21` eklenebilir (sadece yerel modda çalışır).
 
 ## Kodun haritası
 

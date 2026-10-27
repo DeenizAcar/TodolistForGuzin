@@ -5,7 +5,7 @@ import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, defaultState, clampPos, spawnPos,
 import { roomSVG } from './room.js';
 import {
   dayKey, uid, now, POSTIT_COLORS, fridgeList, unlockInfo, visibleNotes, unreadNotes,
-  esc, fmtDate, tilt, normalize, hourAt, BONUS, BONUS_MIN,
+  esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, BONUS, BONUS_MIN,
 } from './logic.js';
 
 const $ = s => document.querySelector(s);
@@ -18,7 +18,7 @@ let user = null;
 const ui = {
   design: false, sel: null, tab: 'shop', sheet: null, letter: null, fresh: false,
   drag: null, pending: false, color: POSTIT_COLORS[0], delArm: null, delT: null,
-  lastMin: '', lastHearts: null, pruned: false,
+  lastMin: '', lastHearts: null, pruned: false, swingUntil: 0,
 };
 
 const act = ops => store.apply(ops);
@@ -129,6 +129,7 @@ function renderRoom() {
   svg.innerHTML = roomSVG(S, {
     now: d, design: ui.design, selected: ui.design ? ui.sel : null,
     postits: open.map(t => t.color), unread: unreadNotes(S).length,
+    dnd: dndActive(S), swing: Date.now() < ui.swingUntil,
   });
   placeSelBar();
 }
@@ -153,6 +154,7 @@ function renderToday() {
     ${total ? `<div class="bar"><i style="width:${Math.round(done / total * 100)}%"></i></div>` : ''}
     ${minis ? `<div class="minis">${minis}</div>` : ''}
     <div class="st">${statusLine(u)}</div>
+    ${dndActive(S) ? `<div class="st">📚 Kapıda "Do not disturb" asılı · ${dndLabel()}</div>` : ''}
     ${unread ? '<div class="mailnote">💌 Kapının önünde bir zarf var!</div>' : ''}`;
 }
 
@@ -285,6 +287,7 @@ function renderMenu() {
       <li>Biten her not <b>+1 ♡</b>. En az ${BONUS_MIN} notun hepsi bitince <b>+${BONUS} ♡</b> bonus.</li>
       <li>Liste bitince ve saat <b>${h}:00</b> olunca <b>dekorasyon</b> açılır: kalplerinle eşya al, sürükleyip yerleştir.</li>
       <li><b>↻ Her gün</b> işaretli notlar her sabah yeniden gelir.</li>
+      <li>Ders çalışırken kapıdaki <b>Güzin</b> tabelasına dokun: <b>Do not disturb</b> asılır, Deniz de görür. Bitince tekrar dokun.</li>
       <li>Kapının önünde zarf görürsen aç, içinde hediye olabilir 💌</li>
     </ul>
     ${S ? `<p class="mut small" style="text-align:center;margin-top:16px">Şimdiye kadar ${S.stats?.done || 0} not bitirdin ♡</p>` : ''}`;
@@ -515,6 +518,7 @@ function onPointerUp() {
 function onRoomClick(e) {
   if (ui.design || !S) return;
   if (e.target.closest('[data-act="mail"]')) { openSheet('mail'); return; }
+  if (e.target.closest('[data-act="sign"]')) { toggleDnd(); return; }
   const g = e.target.closest('[data-pid]');
   if (!g) return;
   const item = g.dataset.item;
@@ -526,6 +530,25 @@ function onRoomClick(e) {
   setTimeout(() => g.classList.remove('wiggle'), 520);
   if (item === 'cat') bubble('mrrr ♡', e.clientX, e.clientY);
   else if (item === 'teddy') bubble('♡', e.clientX, e.clientY);
+}
+
+/* ---------- Kapı tabelası ---------- */
+
+function dndLabel() {
+  const min = Math.floor((Date.now() - S.dnd.since) / 60000);
+  return min < 1 ? 'yeni asıldı' : fmtDur(min);
+}
+
+function toggleDnd() {
+  ui.swingUntil = Date.now() + 900;
+  if (dndActive(S)) {
+    const min = Math.floor((Date.now() - S.dnd.since) / 60000);
+    act([['dnd', DEL]]);
+    toast(min >= 1 ? `Kapı tekrar açık ♡ ${fmtDur(min)} çalıştın, aferin` : 'Kapı tekrar açık ♡');
+  } else {
+    act([['dnd', { since: Date.now() }]]);
+    toast('📚 Kapıya "Do not disturb" asıldı. İyi çalışmalar ♡');
+  }
 }
 
 /* ---------- Mektuplar ---------- */

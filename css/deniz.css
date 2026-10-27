@@ -33,4 +33,15 @@ form .b.big{margin-top:4px}
 .tl-it small{margin-left:auto;color:var(--mut);white-space:nowrap}
 .inline{display:flex;gap:8px}
 .inline input{flex:1}
+.card h3{margin:16px 0 8px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip-x{background:var(--soft);border:2px solid var(--line);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;cursor:pointer;color:var(--tx)}
+.chip-x:hover{border-color:var(--acc2)}
+.chip-x.arm,.tl-it .x-del.arm{background:#d9486f;border-color:#d9486f;color:#fff}
+.b.danger{background:transparent;border-color:#d9486f;color:#d9486f}
+.b.danger.arm{background:#d9486f;color:#fff}
+.tl-it .x-del{border:0;background:none;color:var(--mut);cursor:pointer;font-weight:800;font-size:13px;padding:2px 8px;border-radius:999px;margin-left:4px}
+.door{background:var(--soft);border-radius:16px;padding:12px 14px;font-size:14px;margin-bottom:10px}
+.door.on{background:#ec6f9d;color:#fff}
+.door b{font-weight:800}
 @media (max-width:520px){.row2{grid-template-columns:1fr}}

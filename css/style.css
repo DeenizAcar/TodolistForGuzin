@@ -101,7 +101,10 @@ h3{font-size:15px;margin:18px 0 8px;font-weight:800;color:var(--acc)}
 #room .it .art{transform-box:fill-box;transform-origin:50% 100%}
 #room .it.wiggle .art{animation:wiggle .5s}
 @keyframes wiggle{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg) scale(1.02)}75%{transform:rotate(3deg) scale(1.02)}}
-#room .it-fridge,#room .envelope,#room .it-cat{cursor:pointer}
+#room .it-fridge,#room .envelope,#room .it-cat,#room .door-sign{cursor:pointer}
+#room .door-sign{transform-box:fill-box;transform-origin:50% 0}
+#room .door-sign.swing{animation:swing .9s ease-out}
+@keyframes swing{15%{transform:rotate(-12deg)}35%{transform:rotate(9deg)}55%{transform:rotate(-5deg)}75%{transform:rotate(2deg)}100%{transform:rotate(0)}}
 .design #room .it{cursor:grab}
 .design #room .it.dragging{cursor:grabbing}
 .sel-outline{fill:none;stroke:var(--acc);stroke-width:4;stroke-dasharray:10 8;pointer-events:none;animation:dash 1.2s linear infinite}

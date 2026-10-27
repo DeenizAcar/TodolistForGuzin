@@ -89,17 +89,32 @@ function windowArt({ phase = 'day' } = {}) {
   <rect x="0" y="3" width="270" height="11" rx="5.5" fill="${C.wood}"/>`;
 }
 
-const doorArt = `
+// Kapıdaki tabela: dokununca "Güzin" ile "DO NOT DISTURB" arasında döner.
+function doorArt({ dnd = false, swing = false } = {}) {
+  const font = 'font-family="Nunito, sans-serif" font-weight="800" text-anchor="middle"';
+  const sign = dnd
+    ? `<path d="M50 50L85 28L120 50" fill="none" class="thin"/>
+       <rect x="26" y="48" width="118" height="54" rx="14" fill="${C.rose}"/>
+       <text x="85" y="71" font-size="16" letter-spacing="1" fill="#fff" ${font}>DO NOT</text>
+       <text x="85" y="91" font-size="16" letter-spacing="1" fill="#fff" ${font}>DISTURB</text>
+       <path class="ns" d="${star(38, 60, 5)}" fill="#fff" opacity=".8"/>
+       <path class="ns" d="${star(132, 92, 4)}" fill="#fff" opacity=".8"/>`
+    : `<path d="M58 52L85 28L112 52" fill="none" class="thin"/>
+       <rect x="40" y="50" width="90" height="38" rx="13" fill="#fff4f8"/>
+       <text x="85" y="76" font-size="20" fill="${C.rose}" ${font}>Güzin</text>
+       <path class="ns" d="${heart(85, 100, 18)}" fill="${C.pink}"/>`;
+  return `
   <rect x="4" y="4" width="162" height="374" rx="12" fill="#fff"/>
   <rect x="18" y="18" width="134" height="360" rx="8" fill="#e9b98d"/>
   <rect x="34" y="40" width="102" height="118" rx="10" fill="#f2cf9f"/>
   <rect x="34" y="182" width="102" height="170" rx="10" fill="#f2cf9f"/>
   <circle cx="134" cy="200" r="9" fill="${C.yellow}"/>
-  <path d="M58 52L85 28L112 52" fill="none" class="thin"/>
-  <circle class="ns" cx="85" cy="28" r="3.5" fill="${C.ink}"/>
-  <rect x="40" y="50" width="90" height="38" rx="13" fill="#fff4f8"/>
-  <text x="85" y="76" text-anchor="middle" font-size="20" font-weight="800" fill="${C.rose}" font-family="Nunito, sans-serif">Güzin</text>
-  <path class="ns" d="${heart(85, 100, 18)}" fill="${C.pink}"/>`;
+  <g class="door-sign${swing ? ' swing' : ''}" data-act="sign">
+    <rect class="ns" x="22" y="20" width="126" height="102" fill="transparent"/>
+    ${sign}
+    <circle class="ns" cx="85" cy="28" r="3.5" fill="${C.ink}"/>
+  </g>`;
+}
 
 /* ---------- Mobilyalar ---------- */
 

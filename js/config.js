@@ -12,3 +12,7 @@ export const firebaseConfig = {
 
 // Veritabanındaki oda belgesinin adı (rooms/guzin).
 export const ROOM_ID = 'guzin';
+
+// Deneme için adrese ?yerel eklenirse gerçek oda yerine bu tarayıcıdaki
+// boş bir deneme odası açılır (Firebase'e hiç dokunmaz).
+export const LOCAL_MODE = !firebaseConfig || new URLSearchParams(location.search).has('yerel');

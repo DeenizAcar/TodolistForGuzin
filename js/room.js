@@ -23,7 +23,7 @@ export function roomSVG(S, o = {}) {
   const { W, H, WALL } = STAGE;
   const now = o.now || new Date();
   const phase = skyPhase(now);
-  const ctx = { now, phase, postits: o.postits || [] };
+  const ctx = { now, phase, postits: o.postits || [], dnd: !!o.dnd, swing: !!o.swing };
   const placed = sortedPlaced(S);
 
   const items = placed.map(p => {
