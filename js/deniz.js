@@ -3,6 +3,7 @@
 import { createStore, DEL } from './store.js';
 import { ITEMS, SHOP, GIFTS, WALLS, FLOORS, defaultState } from './catalog.js';
 import { roomSVG } from './room.js';
+import { setupServiceWorker } from './sw-update.js';
 import { dayKey, uid, now, fridgeList, unlockInfo, isDone, esc, fmtDate, normalize, pad, dndActive, fmtDur } from './logic.js';
 
 const $ = s => document.querySelector(s);
@@ -28,6 +29,7 @@ async function init() {
   if (store.mode === 'local') $('#localNote').hidden = false;
   store.start({ seed: defaultState, onUser, onState, onError });
   setInterval(() => S && render(), 30000);
+  setupServiceWorker();
 }
 
 function onUser(u) {

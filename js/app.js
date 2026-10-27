@@ -3,6 +3,7 @@
 import { createStore, INC, DEL } from './store.js';
 import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, defaultState, clampPos, spawnPos, thumbSVG, swatchSVG } from './catalog.js';
 import { roomSVG } from './room.js';
+import { setupServiceWorker } from './sw-update.js';
 import {
   dayKey, uid, now, POSTIT_COLORS, fridgeList, unlockInfo, visibleNotes, unreadNotes,
   esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, BONUS, BONUS_MIN,
@@ -38,7 +39,7 @@ async function init() {
   store.start({ seed: defaultState, onUser, onState, onError });
   setInterval(() => tick(false), 15000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
-  if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch(() => {});
+  setupServiceWorker();
 }
 
 /* ---------- Veri olayları ---------- */

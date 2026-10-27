@@ -1,16 +1,21 @@
 // Sitenin dosyalarını önbelleğe alır, internet yokken de açılsın.
-// Kendi dosyalarımız için önce ağ (güncellemeler hemen gelsin), Firebase ve
-// fontlar için önce önbellek (sürümlü adresler, değişmezler).
-const CACHE = 'oda-v1';
+// Kendi dosyalarımız: her istekte sunucuya "değişti mi?" diye sorulur (no-cache),
+// böylece yeni sürüm yayınlanınca sayfa ile kod asla karışmaz. İnternet yoksa önbellekten.
+// Firebase ve fontlar: sürümlü adresler, değişmezler; önce önbellek.
+const CACHE = 'oda-v3';
 const ASSETS = [
   './', './index.html', './deniz.html', './manifest.webmanifest',
   './css/style.css', './css/deniz.css',
-  './js/app.js', './js/deniz.js', './js/store.js', './js/logic.js', './js/catalog.js', './js/room.js', './js/config.js',
+  './js/app.js', './js/deniz.js', './js/store.js', './js/logic.js', './js/catalog.js', './js/room.js', './js/config.js', './js/sw-update.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png',
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' }))))
+      .then(() => self.skipWaiting()),
+  );
 });
 
 self.addEventListener('activate', e => {
@@ -28,7 +33,7 @@ self.addEventListener('fetch', e => {
 
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(req)
+      fetch(req, { cache: 'no-cache' })
         .then(res => {
           if (res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); }
           return res;
