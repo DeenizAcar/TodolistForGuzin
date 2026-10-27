@@ -1,4 +1,6 @@
-:root{--bg:#fff4f8;--card:#fff;--line:#f7d6e3;--soft:#ffe9f1;--tx:#5a2d42;--mut:#a7748b;--acc:#ec6f9d;--acc2:#f9a8c7;--on-acc:#fff;--dot:#f9cfe0;--field:#fffafc;--ink:#6b3d52;--back:rgba(90,45,66,.32);color-scheme:light}
+:root{--bg:#fff4f8;--card:#fff;--line:#f7d6e3;--soft:#ffe9f1;--tx:#5a2d42;--mut:#a7748b;--acc:#ec6f9d;--acc2:#f9a8c7;--on-acc:#fff;--dot:#f9cfe0;--field:#fffafc;--ink:#6b3d52;--back:rgba(90,45,66,.32);color-scheme:only light}
+/* "only light": Chrome'un "web sayfalarını otomatik karart" özelliği açık temayı ters çevirip
+   oda çizimlerini bozmasın. Koyu tema zaten kendi renkleriyle geliyor (color-scheme:dark). */
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1218;--card:#2a1a23;--line:#4a2c3b;--soft:#3a2430;--tx:#fbe4ee;--mut:#c99bb0;--acc:#ff8fbf;--acc2:#a84f78;--on-acc:#3a1426;--dot:#3d2632;--field:#22151c;--back:rgba(0,0,0,.55);color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#1d1218;--card:#2a1a23;--line:#4a2c3b;--soft:#3a2430;--tx:#fbe4ee;--mut:#c99bb0;--acc:#ff8fbf;--acc2:#a84f78;--on-acc:#3a1426;--dot:#3d2632;--field:#22151c;--back:rgba(0,0,0,.55);color-scheme:dark}
 
