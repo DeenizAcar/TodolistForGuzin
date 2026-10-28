@@ -394,10 +394,18 @@ function completeTodo(id, el) {
 function undoTodo(id) {
   const t = S.todos[id];
   if (!t) return;
+  const day = dayKey(now());
   const ops = t.repeat ? [[`todos.${id}.doneDay`, DEL]] : [[`todos.${id}.done`, false], [`todos.${id}.doneAt`, DEL]];
-  if (S.hearts > 0) ops.push(['hearts', INC(-1)]);
+  // Bu not "hepsi bitti" bonusunu getirdiyse geri alınca bonus da geri alınır,
+  // liste de artık bitmemiş sayılır.
+  let take = 1;
+  if (S.bonus[day]) { take += BONUS; ops.push([`bonus.${day}`, DEL]); }
+  if (S.listDone[day]) ops.push([`listDone.${day}`, DEL]);
+  take = Math.min(take, Math.max(0, S.hearts));
+  if (take) ops.push(['hearts', INC(-take)]);
   ops.push(['stats.done', INC(-1)]);
   act(ops);
+  if (take > 1) toast(`Geri alındı · −${take} ♡ (bonus da geri alındı)`);
 }
 
 const hasTrashBin = () => Object.values(S.placed).some(p => p.item === 'trash');
