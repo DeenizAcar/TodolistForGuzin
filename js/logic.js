@@ -65,7 +65,9 @@ export function unlockInfo(S, d = now()) {
   const listOk = open.length === 0;
   const timeOk = d.getHours() >= hour;
   const gift = !!S.unlock?.[day];
-  return { day, open, doneToday, hour, listOk, timeOk, gift, unlocked: gift || (listOk && timeOk) };
+  // Bugün bir kez açıldıysa sonradan not eklense de gün boyu açık kalır.
+  const earned = !!S.opened?.[day];
+  return { day, open, doneToday, hour, listOk, timeOk, gift, earned, unlocked: gift || earned || (listOk && timeOk) };
 }
 
 // "saat 18:00'de", "saat 19:00'da", "saat 15:00'te" (Türkçe ek uyumu).
@@ -153,7 +155,7 @@ export function skyPhase(d = now()) {
 // Eski verilerde eksik alan kalmasın.
 export function normalize(st) {
   const S = st || {};
-  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog', 'trash']) {
+  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog', 'trash', 'opened']) {
     if (typeof S[k] !== 'object' || S[k] === null) S[k] = {};
   }
   if (typeof S.timer !== 'object' || S.timer === null) S.timer = {};

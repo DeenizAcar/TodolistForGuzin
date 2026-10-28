@@ -204,6 +204,11 @@ function renderToday() {
 
 function renderDock() {
   const u = unlockInfo(S, now());
+  // Kilit bugün ilk kez açıldıysa kaydet; böylece yeni not eklenince tekrar kilitlenmez.
+  if (u.listOk && u.timeOk && !u.earned && !ui.openedSent) {
+    ui.openedSent = u.day;
+    setTimeout(() => { act([[`opened.${u.day}`, true]]); ui.openedSent = null; }, 0);
+  }
   const c = $('#fridgeCnt');
   c.hidden = !u.open.length;
   c.textContent = u.open.length;
