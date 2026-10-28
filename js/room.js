@@ -23,29 +23,38 @@ export function roomSVG(S, o = {}) {
   const { W, H, WALL } = STAGE;
   const now = o.now || new Date();
   const phase = skyPhase(now);
-  const ctx = { now, phase, postits: o.postits || [], dnd: !!o.dnd, swing: !!o.swing };
+  const curtain = !!S.curtain;
+  const lightOn = !!S.light;
+  const ctx = { now, phase, postits: o.postits || [], dnd: !!o.dnd, swing: !!o.swing, curtain, light: lightOn };
   const placed = sortedPlaced(S);
+  // Kedi gibi yerinde durmayan eşyaların o anki konumu/pozu (sadece ekranda, kaydedilmez).
+  const ov = o.overrides || {};
 
   const items = placed.map(p => {
     const d = p.def;
-    const art = artOf(d, ctx);
-    const inner = p.flip && !d.noFlip ? `<g transform="translate(${d.w} 0) scale(-1 1)">${art}</g>` : art;
+    const v = ov[p.pid] || {};
+    const x = v.x ?? p.x, y = v.y ?? p.y, flip = v.flip ?? p.flip;
+    const art = artOf(d, { ...ctx, ...v });
+    const inner = flip && !d.noFlip ? `<g transform="translate(${d.w} 0) scale(-1 1)">${art}</g>` : art;
     const hit = o.design ? `<rect class="hit" width="${d.w}" height="${d.h}" fill="transparent"/>` : '';
     const sel = o.selected === p.pid ? `<rect class="sel-outline" x="-8" y="-8" width="${d.w + 16}" height="${d.h + 16}" rx="14"/>` : '';
-    return `<g class="it it-${p.item}" data-pid="${p.pid}" data-item="${p.item}" transform="translate(${p.x} ${p.y})">${hit}<g class="art">${inner}</g>${sel}</g>`;
+    return `<g class="it it-${p.item}${v.pose ? ' pose-' + v.pose : ''}" data-pid="${p.pid}" data-item="${p.item}" transform="translate(${x} ${y})">${hit}<g class="art">${inner}</g>${sel}</g>`;
   }).join('');
 
+  // Aydınlık: gün ışığı (perde kapalıysa azalır) ya da tavan ışığı, hangisi fazlaysa.
+  const sun = phase === 'day' ? 1 : phase === 'night' ? 0 : .55;
+  const lit = Math.max(curtain ? sun * .3 : sun, lightOn ? .92 : 0);
+  const dark = 1 - lit;
   let light = '';
-  if (phase === 'night') {
-    light = `<rect width="${W}" height="${H}" fill="#1e1640" opacity=".36" pointer-events="none"/>`
-      + `<g class="glows" pointer-events="none">${placed.flatMap(p => (p.def.glow || []).map(g => {
-        const gx = p.flip && !p.def.noFlip ? p.def.w - g.cx : g.cx;
-        return `<circle cx="${p.x + gx}" cy="${p.y + g.cy}" r="${g.r}" fill="url(#${g.c || 'glow'})"/>`;
-      })).join('')}</g>`;
-  } else if (phase === 'sunset') {
-    light = `<rect width="${W}" height="${H}" fill="#ff8a5c" opacity=".07" pointer-events="none"/>`;
-  } else if (phase === 'dawn') {
-    light = `<rect width="${W}" height="${H}" fill="#ffb3c8" opacity=".06" pointer-events="none"/>`;
+  if (dark > .04) light += `<rect width="${W}" height="${H}" fill="#1e1640" opacity="${(dark * .4).toFixed(2)}" pointer-events="none"/>`;
+  if (lightOn) light += `<rect width="${W}" height="${H}" fill="#ffc978" opacity=".07" pointer-events="none"/>`;
+  else if (!curtain && phase === 'sunset') light += `<rect width="${W}" height="${H}" fill="#ff8a5c" opacity=".07" pointer-events="none"/>`;
+  else if (!curtain && phase === 'dawn') light += `<rect width="${W}" height="${H}" fill="#ffb3c8" opacity=".06" pointer-events="none"/>`;
+  if (dark > .3) {
+    light += `<g class="glows" pointer-events="none" opacity="${Math.min(1, .35 + (dark - .3) * 1.3).toFixed(2)}">${placed.flatMap(p => (p.def.glow || []).map(g => {
+      const gx = p.flip && !p.def.noFlip ? p.def.w - g.cx : g.cx;
+      return `<circle cx="${p.x + gx}" cy="${p.y + g.cy}" r="${g.r}" fill="url(#${g.c || 'glow'})"/>`;
+    })).join('')}</g>`;
   }
 
   let env = '';

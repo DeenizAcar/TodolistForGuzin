@@ -1,12 +1,13 @@
 // Güzin'in odası: buzdolabı listesi, kalpler, akşam dekorasyonu, Deniz'den mektuplar.
 
 import { createStore, INC, DEL } from './store.js';
-import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, defaultState, clampPos, spawnPos, thumbSVG, swatchSVG } from './catalog.js';
+import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, STAGE, defaultState, clampPos, spawnPos, thumbSVG, swatchSVG } from './catalog.js';
 import { roomSVG } from './room.js';
 import { setupServiceWorker } from './sw-update.js';
 import {
   dayKey, uid, now, POSTIT_COLORS, fridgeList, unlockInfo, visibleNotes, unreadNotes,
-  esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, BONUS, BONUS_MIN,
+  esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, skyPhase,
+  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals, BONUS, BONUS_MIN,
 } from './logic.js';
 
 const $ = s => document.querySelector(s);
@@ -20,9 +21,13 @@ const ui = {
   design: false, sel: null, tab: 'shop', sheet: null, letter: null, fresh: false,
   drag: null, pending: false, color: POSTIT_COLORS[0], delArm: null, delT: null,
   lastMin: '', lastHearts: null, pruned: false, swingUntil: 0,
+  ptr: null, rub: 0, lastRub: 0, timerFired: null, timerTxt: '', logArm: null, logT: null,
 };
 
 const act = ops => store.apply(ops);
+
+// Sayaç ön ayarları: [dakika, tür]. "Mola" başlatınca kapıya tabela asılmaz.
+const PRESETS = [[25, 'Odak'], [50, 'Odak'], [10, 'Mola'], [5, 'Mola']];
 
 init();
 
@@ -38,6 +43,7 @@ async function init() {
   if (store.mode === 'local') $('#localNote').hidden = false;
   store.start({ seed: defaultState, onUser, onState, onError });
   setInterval(() => tick(false), 15000);
+  setInterval(timerTick, 250);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
   setupServiceWorker();
 }
@@ -77,12 +83,16 @@ function onError(e) {
   }
 }
 
-// İki haftadan eski bitmiş notları temizle; belge küçük kalsın.
+// İki haftadan eski bitmiş notları ve yarım yıldan eski çalışma kayıtlarını temizle; belge küçük kalsın.
+// Unutulup süresi dolmuş "Do not disturb" tabelası da kaldırılır (çalışma sayılmaz).
 function prune() {
   const lim = Date.now() - 14 * 864e5;
   const ops = Object.entries(S.todos)
     .filter(([, t]) => !t.repeat && t.done && (t.doneAt || 0) < lim)
     .map(([id]) => [`todos.${id}`, DEL]);
+  const logLim = Date.now() - 183 * 864e5;
+  for (const [id, e] of Object.entries(S.studyLog)) if ((e.start || 0) < logLim) ops.push([`studyLog.${id}`, DEL]);
+  if (S.dnd && !dndActive(S)) ops.push(['dnd', DEL]);
   if (ops.length) act(ops);
 }
 
@@ -107,6 +117,8 @@ function render() {
   renderDock();
   if (ui.design) renderDrawer();
   renderSheet();
+  // Alt kart ve düğmeler odanın boyunu değiştirebilir; köşe düğmelerini en son yerleştir.
+  placeRoomCtrls();
 }
 
 function renderTop() {
@@ -127,12 +139,33 @@ function renderTop() {
 function renderRoom() {
   const d = now();
   const { open } = fridgeList(S, dayKey(d));
+  syncCats();
   svg.innerHTML = roomSVG(S, {
     now: d, design: ui.design, selected: ui.design ? ui.sel : null,
     postits: open.map(t => t.color), unread: unreadNotes(S).length,
-    dnd: dndActive(S), swing: Date.now() < ui.swingUntil,
+    dnd: dndActive(S), swing: Date.now() < ui.swingUntil, overrides: catOverrides(),
   });
   placeSelBar();
+  placeRoomCtrls();
+}
+
+// Perde ve ışık düğmeleri odanın sol üst köşesinde dursun.
+function placeRoomCtrls() {
+  const box = $('#roomCtrls');
+  box.hidden = ui.design;
+  if (ui.design) return;
+  const m = svg.getScreenCTM();
+  const wr = $('#stageWrap').getBoundingClientRect();
+  if (!m) return;
+  box.style.left = (m.e - wr.left + 22 * m.a) + 'px';
+  box.style.top = (m.f - wr.top + 22 * m.d) + 'px';
+  const c = $('#curtainBtn'), l = $('#lightBtn');
+  c.classList.toggle('on', !!S.curtain);
+  c.setAttribute('aria-pressed', S.curtain ? 'true' : 'false');
+  c.title = S.curtain ? 'Perdeyi aç' : 'Perdeyi kapat';
+  l.classList.toggle('on', !!S.light);
+  l.setAttribute('aria-pressed', S.light ? 'true' : 'false');
+  l.title = S.light ? 'Işığı kapat' : 'Işığı aç';
 }
 
 function statusLine(u) {
@@ -192,7 +225,7 @@ function closeSheet() {
 
 function renderSheet() {
   if (!ui.sheet || !S) return;
-  ({ fridge: renderFridge, info: renderInfo, mail: renderMail, menu: renderMenu })[ui.sheet]();
+  ({ fridge: renderFridge, info: renderInfo, mail: renderMail, menu: renderMenu, timer: renderTimerSheet })[ui.sheet]();
 }
 
 function renderFridge() {
@@ -288,7 +321,9 @@ function renderMenu() {
       <li>Biten her not <b>+1 ♡</b>. En az ${BONUS_MIN} notun hepsi bitince <b>+${BONUS} ♡</b> bonus.</li>
       <li>Liste bitince ve saat <b>${h}:00</b> olunca <b>dekorasyon</b> açılır: kalplerinle eşya al, sürükleyip yerleştir.</li>
       <li><b>↻ Her gün</b> işaretli notlar her sabah yeniden gelir.</li>
-      <li>Ders çalışırken kapıdaki <b>Güzin</b> tabelasına dokun: <b>Do not disturb</b> asılır, Deniz de görür. Bitince tekrar dokun.</li>
+      <li>Ders çalışırken kapıdaki <b>Güzin</b> tabelasına dokun ya da <b>⏱ sayacı</b> başlat: <b>Do not disturb</b> asılır, Deniz de görür. Bitince tabelaya tekrar dokun; ne kadar çalıştığın sayacın altındaki geçmişe yazılır.</li>
+      <li><b>Kediyi</b> tıklayarak ya da üstünde parmağını/fareni gezdirerek sev. Her gün ilk sevişte <b>+1 ♡</b>.</li>
+      <li>Sol üstteki <b>🪟</b> perdeyi, <b>💡</b> ışığı açıp kapatır. Pencereye ve kapının yanındaki düğmeye dokunmak da olur.</li>
       <li>Kapının önünde zarf görürsen aç, içinde hediye olabilir 💌</li>
     </ul>
     ${S ? `<p class="mut small" style="text-align:center;margin-top:16px">Şimdiye kadar ${S.stats?.done || 0} not bitirdin ♡</p>` : ''}`;
@@ -359,6 +394,7 @@ function enterDesign() {
   if (!S || !unlockInfo(S, now()).unlocked) return;
   ui.design = true;
   ui.sel = null;
+  cats.clear();
   appEl.classList.add('design');
   $('#drawer').hidden = false;
   closeSheet();
@@ -487,7 +523,19 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   const d = ui.drag;
-  if (!d) return;
+  if (!d) {
+    if (ui.design || !S) return;
+    // Kedinin gözleri fareyi takip etsin; kedinin üstünde gezdirmek onu sever.
+    ui.ptr = svgPoint(e);
+    const g = e.target.closest?.('.it-cat');
+    if (!g || !(e.pointerType === 'mouse' || e.buttons)) { ui.rubPid = null; return; }
+    // Sadece kedinin üstünde gezdirilen hareket sayılır; imleç bir kez hızla geçerse sevme sayılmaz.
+    if (ui.rubPid !== g.dataset.pid) { ui.rubPid = g.dataset.pid; ui.rub = 0; return; }
+    ui.rub += Math.min(30, Math.hypot(e.movementX || 0, e.movementY || 0));
+    const t = performance.now();
+    if (ui.rub > 180 && t - ui.lastRub > 700) { ui.rub = 0; ui.lastRub = t; petCat(g.dataset.pid, e.clientX, e.clientY, true); }
+    return;
+  }
   if (!d.moved) {
     if (Math.hypot(e.clientX - d.sx, e.clientY - d.sy) < 5) return;
     d.moved = true;
@@ -520,17 +568,135 @@ function onRoomClick(e) {
   if (ui.design || !S) return;
   if (e.target.closest('[data-act="mail"]')) { openSheet('mail'); return; }
   if (e.target.closest('[data-act="sign"]')) { toggleDnd(); return; }
+  if (e.target.closest('[data-act="light"]')) { toggleLight(); return; }
   const g = e.target.closest('[data-pid]');
   if (!g) return;
   const item = g.dataset.item;
   if (item === 'fridge') { openSheet('fridge'); return; }
   if (item === 'door' && unreadNotes(S).length) { openSheet('mail'); return; }
+  if (item === 'window') { toggleCurtain(); return; }
+  if (item === 'cat') { petCat(g.dataset.pid, e.clientX, e.clientY, false); return; }
   g.classList.remove('wiggle');
   g.getBoundingClientRect();
   g.classList.add('wiggle');
   setTimeout(() => g.classList.remove('wiggle'), 520);
-  if (item === 'cat') bubble('mrrr ♡', e.clientX, e.clientY);
-  else if (item === 'teddy') bubble('♡', e.clientX, e.clientY);
+  if (item === 'teddy') bubble('♡', e.clientX, e.clientY);
+}
+
+/* ---------- Kedi ---------- */
+// Kedi odada kendi kendine dolaşır: oturur, gezinir, uyur. Bu sadece ekranda olur;
+// kayıtlı yeri "evi"dir (dekorasyonda oraya konur, sayfa açılınca oradan başlar).
+
+const cats = new Map();
+let catRAF = 0;
+let catLast = 0;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const rand = (a, b) => a + Math.random() * (b - a);
+
+function syncCats() {
+  const ids = Object.entries(S.placed).filter(([, p]) => p.item === 'cat').map(([pid]) => pid);
+  for (const id of [...cats.keys()]) if (!ids.includes(id)) cats.delete(id);
+  if (ui.design) return;
+  const night = skyPhase(now()) === 'night';
+  const t = performance.now();
+  for (const id of ids) {
+    if (cats.has(id)) continue;
+    const p = S.placed[id];
+    cats.set(id, { x: p.x, y: p.y, pose: night ? 'sleep' : 'sit', flip: !!p.flip, until: t + rand(2500, 6000), look: [0, 0] });
+  }
+  if (cats.size && !catRAF) { catLast = t; catRAF = requestAnimationFrame(catLoop); }
+}
+
+function catOverrides() {
+  if (ui.design) return null;
+  const o = {};
+  for (const [id, c] of cats) o[id] = { x: Math.round(c.x), y: Math.round(c.y), pose: c.pose, flip: c.flip, look: c.look };
+  return o;
+}
+
+function startWalk(c) {
+  const { W, H, WALL } = STAGE;
+  const d = ITEMS.cat;
+  let tx = rand(10, W - d.w - 10);
+  if (Math.abs(tx - c.x) < 140) tx = c.x + (tx >= c.x ? 180 : -180);
+  tx = Math.max(10, Math.min(W - d.w - 10, tx));
+  c.tx = tx;
+  // Odanın ön şeridinde gezinsin; böylece mobilyaların önünden geçer, üstlerinden değil.
+  c.ty = rand(Math.max(WALL + 95, H - 68), H - 6) - d.h;
+  c.flip = tx < c.x;
+  c.pose = 'walk';
+}
+
+function catLoop(ts) {
+  catRAF = 0;
+  if (ui.design || !S || !cats.size) return;
+  const dt = Math.min(0.1, (ts - catLast) / 1000);
+  catLast = ts;
+  const night = skyPhase(now()) === 'night';
+  for (const [id, c] of cats) {
+    const pose0 = c.pose, flip0 = c.flip, x0 = c.x, y0 = c.y, look0 = c.look;
+    if (c.pose === 'walk') {
+      const dx = c.tx - c.x, dy = c.ty - c.y, dist = Math.hypot(dx, dy), step = 70 * dt;
+      if (dist <= step) { c.x = c.tx; c.y = c.ty; c.pose = 'sit'; c.until = ts + rand(4000, 9000); }
+      else { c.x += dx / dist * step; c.y += dy / dist * step; }
+    } else if (ts > c.until) {
+      if (c.pose === 'happy') { c.pose = 'sit'; c.until = ts + rand(3000, 7000); }
+      else if (c.pose === 'sleep') {
+        if (Math.random() < (night ? .25 : .7)) { c.pose = 'sit'; c.until = ts + rand(4000, 8000); }
+        else c.until = ts + rand(10000, 20000);
+      } else {
+        const r = Math.random();
+        if (!reduceMotion && r < (night ? .3 : .6)) startWalk(c);
+        else if (r < (night ? .85 : .75)) { c.pose = 'sleep'; c.until = ts + rand(15000, 40000); }
+        else c.until = ts + rand(3000, 7000);
+      }
+    }
+    if (c.pose === 'sit' && ui.ptr) {
+      const k = (v, s) => Math.max(-1, Math.min(1, v / s));
+      const lx = k(ui.ptr.x - (c.x + 66), 110) * 2.6;
+      c.look = [c.flip ? -lx : lx, k(ui.ptr.y - (c.y + 34), 110) * 2];
+    }
+    const full = pose0 !== c.pose || flip0 !== c.flip;
+    if (full || x0 !== c.x || y0 !== c.y || look0 !== c.look) drawCat(id, c, full);
+  }
+  catRAF = requestAnimationFrame(catLoop);
+}
+
+function drawCat(id, c, full) {
+  const g = svg.querySelector(`[data-pid="${id}"]`);
+  if (!g) return;
+  g.setAttribute('transform', `translate(${Math.round(c.x)} ${Math.round(c.y)})`);
+  if (full) {
+    const d = ITEMS.cat;
+    const art = d.art({ pose: c.pose, look: c.look });
+    g.querySelector('.art').innerHTML = c.flip ? `<g transform="translate(${d.w} 0) scale(-1 1)">${art}</g>` : art;
+    g.setAttribute('class', `it it-cat pose-${c.pose}`);
+  } else if (c.pose === 'sit') {
+    const e = g.querySelector('.cat-eyes > g');
+    if (e) e.setAttribute('transform', `translate(${c.look[0].toFixed(1)} ${c.look[1].toFixed(1)})`);
+  }
+}
+
+function petCat(pid, x, y, soft) {
+  const c = cats.get(pid);
+  if (c) { c.pose = 'happy'; c.until = performance.now() + 2600; drawCat(pid, c, true); }
+  if (!soft || Math.random() < .5) bubble(['mrrr ♡', 'prrr ♡', 'miyav ♡', 'mır mır ♡'][Math.floor(Math.random() * 4)], x, y);
+  sparkHearts(x, y, soft ? 3 : 6);
+  const day = dayKey(now());
+  if (S.petDay !== day) {
+    act([['petDay', day], ['hearts', INC(1)]]);
+    toast('Kedi seni çok sevdi ♡ Bugünün kedi kalbi: +1 ♡');
+  }
+}
+
+/* ---------- Perde ve ışık ---------- */
+
+function toggleCurtain() {
+  act([['curtain', !S.curtain]]);
+}
+
+function toggleLight() {
+  act([['light', !S.light]]);
 }
 
 /* ---------- Kapı tabelası ---------- */
@@ -543,13 +709,178 @@ function dndLabel() {
 function toggleDnd() {
   ui.swingUntil = Date.now() + 900;
   if (dndActive(S)) {
-    const min = Math.floor((Date.now() - S.dnd.since) / 60000);
-    act([['dnd', DEL]]);
+    const start = S.dnd.since, end = Date.now();
+    const min = Math.floor((end - start) / 60000);
+    const ops = [['dnd', DEL]];
+    // En az bir dakika sürdüyse çalışma geçmişine yaz.
+    if (min >= 1) ops.push([`studyLog.${uid()}`, { start, end }]);
+    act(ops);
     toast(min >= 1 ? `Kapı tekrar açık ♡ ${fmtDur(min)} çalıştın, aferin` : 'Kapı tekrar açık ♡');
   } else {
     act([['dnd', { since: Date.now() }]]);
     toast('📚 Kapıya "Do not disturb" asıldı. İyi çalışmalar ♡');
   }
+}
+
+/* ---------- Sayaç ---------- */
+
+function timerTick() {
+  if (!S) return;
+  const t = S.timer;
+  const st = timerState(t);
+  const rem = timerRemaining(t);
+  if (st === 'run' && rem <= 0 && ui.timerFired !== t.endAt) {
+    ui.timerFired = t.endAt;
+    timerDone(t);
+    return;
+  }
+  const txt = (st === 'pause' ? '⏸ ' : '⏱ ') + mmss(rem);
+  const btn = $('#timerBtn');
+  if (txt !== ui.timerTxt) {
+    ui.timerTxt = txt;
+    $('#timerTxt').textContent = mmss(rem);
+    $('#timerIc').textContent = st === 'pause' ? '⏸' : '⏱';
+    document.title = st === 'run' ? `${mmss(rem)} · Güzin'in Odası ♡` : "Güzin'in Odası ♡";
+    if (ui.sheet === 'timer') updateTimerDisplay();
+  }
+  btn.classList.toggle('run', st === 'run');
+  btn.classList.toggle('paused', st === 'pause');
+}
+
+function timerDone(t) {
+  const late = Date.now() - t.endAt > 60000;
+  if (S.timer.endAt === t.endAt) act([['timer.endAt', null], ['timer.left', DEL]]);
+  // Uygulama kapalıyken bitmişse sonradan açılışta öttürme.
+  if (late) return;
+  beep();
+  const b = $('#timerBtn');
+  b.classList.remove('ring');
+  b.getBoundingClientRect();
+  b.classList.add('ring');
+  setTimeout(() => b.classList.remove('ring'), 6000);
+  toast(t.label === 'Mola' ? 'Mola bitti, hadi devam ♡' : `Süre doldu! Bir mola hak ettin ♡${dndActive(S) ? ' Bitirdiysen kapıdaki tabelayı kaldır.' : ''}`);
+}
+
+function timerStartPause() {
+  const t = S.timer;
+  const st = timerState(t);
+  if (st === 'run') { act([['timer.endAt', null], ['timer.left', timerRemaining(t)]]); return; }
+  const secs = st === 'pause' ? t.left : t.dur;
+  if (!(secs > 0)) return;
+  const ops = [['timer.endAt', Date.now() + secs * 1000], ['timer.left', DEL]];
+  let msg = '⏱ Sayaç başladı ♡';
+  if (t.label !== 'Mola' && !dndActive(S)) {
+    ops.push(['dnd', { since: Date.now() }]);
+    ui.swingUntil = Date.now() + 900;
+    msg = '⏱ Sayaç başladı, kapıya "Do not disturb" asıldı ♡';
+  }
+  unlockAudio();
+  act(ops);
+  toast(msg);
+}
+
+function timerReset() {
+  act([['timer.endAt', null], ['timer.left', DEL]]);
+}
+
+function setTimerDur(secs, label) {
+  if (timerState(S.timer) !== 'idle') return;
+  const v = Math.max(5, Math.min(180 * 60, Math.round(secs)));
+  const ops = [['timer.dur', v]];
+  if (label) ops.push(['timer.label', label]);
+  act(ops);
+}
+
+function renderTimerSheet() {
+  updateTimerDisplay();
+  renderStudyLog();
+}
+
+function updateTimerDisplay() {
+  const t = S.timer;
+  const st = timerState(t);
+  const rem = timerRemaining(t);
+  const m = $('#tMin'), s = $('#tSec');
+  const idle = st === 'idle';
+  if (document.activeElement !== m) m.value = String(Math.floor(rem / 60)).padStart(2, '0');
+  if (document.activeElement !== s) s.value = String(rem % 60).padStart(2, '0');
+  m.disabled = s.disabled = !idle;
+  document.querySelectorAll('#sheet-timer [data-adj], #sheet-timer [data-preset]').forEach(b => { b.disabled = !idle; });
+  document.querySelectorAll('#sheet-timer [data-preset]').forEach(b => {
+    const [mins, label] = b.dataset.preset.split(':');
+    b.classList.toggle('on', idle && t.dur === mins * 60 && (t.label || 'Odak') === label);
+  });
+  $('#tMode').textContent = st === 'run' ? `${t.label || 'Odak'} · çalışıyor` : st === 'pause' ? `${t.label || 'Odak'} · duraklatıldı` : (t.label || 'Odak');
+  $('#tGo').textContent = st === 'run' ? 'Duraklat' : st === 'pause' ? 'Devam et' : 'Başlat';
+  $('#tReset').disabled = idle;
+  $('#timerFace').classList.toggle('run', st === 'run');
+}
+
+/* ---------- Çalışma geçmişi ---------- */
+
+function renderStudyLog() {
+  const list = studySessions(S);
+  const tot = studyTotals(list);
+  const el = $('#studyLog');
+  if (!list.length) {
+    el.innerHTML = '<div class="empty">Henüz kayıt yok.<br>Ders çalışırken kapıdaki tabelaya dokun ya da sayacı başlat; tabelayı kaldırınca burada görünür ♡</div>';
+    return;
+  }
+  const groups = new Map();
+  for (const s of list) {
+    const k = dayKey(new Date(s.start));
+    if (!groups.has(k)) groups.set(k, []);
+    groups.get(k).push(s);
+  }
+  let h = `<div class="log-tot"><div><b>${fmtDur(tot.today)}</b><span>bugün</span></div><div><b>${fmtDur(tot.week)}</b><span>son 7 gün</span></div></div>`;
+  for (const [, items] of groups) {
+    const dayMin = Math.floor(items.reduce((a, s) => a + (s.end - s.start), 0) / 60000);
+    h += `<div class="log-day"><b>${dayLabel(items[0].start)}</b><span>${fmtDur(dayMin)}</span></div>`;
+    h += items.map(s => {
+      const min = Math.floor((s.end - s.start) / 60000);
+      const right = s.current
+        ? '<span class="log-now">şu an</span>'
+        : `<button class="log-del ${ui.logArm === s.id ? 'arm' : ''}" data-logdel="${s.id}" aria-label="Kaydı sil">${ui.logArm === s.id ? 'sil?' : '×'}</button>`;
+      return `<div class="log-row${s.current ? ' cur' : ''}"><span class="log-t">${hm(s.start)} – ${s.current ? 'şimdi' : hm(s.end)}</span><span class="log-d">${min < 1 ? '1 dk\'dan az' : fmtDur(min)}</span>${right}</div>`;
+    }).join('');
+  }
+  el.innerHTML = h;
+}
+
+function deleteLog(id) {
+  clearTimeout(ui.logT);
+  if (ui.logArm === id) { ui.logArm = null; act([[`studyLog.${id}`, DEL]]); return; }
+  ui.logArm = id;
+  ui.logT = setTimeout(() => { ui.logArm = null; if (ui.sheet === 'timer') renderStudyLog(); }, 3000);
+  renderStudyLog();
+}
+
+/* ---------- Ses ---------- */
+
+let audioCtx = null;
+function unlockAudio() {
+  try {
+    audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+  } catch (e) {}
+}
+
+function beep() {
+  try {
+    unlockAudio();
+    const a = audioCtx;
+    [0, .22, .44, .9, 1.12, 1.34].forEach((t, i) => {
+      const o = a.createOscillator();
+      const g = a.createGain();
+      o.frequency.value = [784, 988, 1175][i % 3];
+      g.gain.setValueAtTime(.0001, a.currentTime + t);
+      g.gain.exponentialRampToValueAtTime(.25, a.currentTime + t + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, a.currentTime + t + .18);
+      o.connect(g).connect(a.destination);
+      o.start(a.currentTime + t);
+      o.stop(a.currentTime + t + .2);
+    });
+  } catch (e) {}
 }
 
 /* ---------- Mektuplar ---------- */
@@ -598,6 +929,21 @@ function burst() {
     s.style.setProperty('--dx', ((Math.random() - .5) * 140) + 'px');
     document.body.appendChild(s);
     setTimeout(() => s.remove(), 1700);
+  }
+}
+
+function sparkHearts(x, y, n) {
+  for (let i = 0; i < n; i++) {
+    const s = document.createElement('div');
+    s.className = 'fx';
+    s.textContent = '♡';
+    s.style.left = (x - 8 + (Math.random() - .5) * 50) + 'px';
+    s.style.top = (y - 10 + (Math.random() - .5) * 20) + 'px';
+    s.style.fontSize = (14 + Math.random() * 10) + 'px';
+    s.style.animationDelay = (Math.random() * .2) + 's';
+    s.style.setProperty('--dx', ((Math.random() - .5) * 70) + 'px');
+    document.body.appendChild(s);
+    setTimeout(() => s.remove(), 1500);
   }
 }
 
@@ -661,6 +1007,33 @@ function setupStatic() {
   $('#fridgeBtn').onclick = () => openSheet('fridge');
   $('#decorBtn').onclick = () => { if (S) unlockInfo(S, now()).unlocked ? enterDesign() : openSheet('info'); };
   $('#heartsBtn').onclick = () => openSheet('info');
+  $('#timerBtn').onclick = () => openSheet('timer');
+  $('#curtainBtn').onclick = () => S && toggleCurtain();
+  $('#lightBtn').onclick = () => S && toggleLight();
+  svg.addEventListener('pointerleave', () => { ui.ptr = null; });
+
+  // Sayaç sayfası
+  $('#tGo').onclick = () => S && timerStartPause();
+  $('#tReset').onclick = () => S && timerReset();
+  const readInputs = () => (Number($('#tMin').value) || 0) * 60 + Math.min(59, Number($('#tSec').value) || 0);
+  ['#tMin', '#tSec'].forEach(id => {
+    $(id).addEventListener('change', () => S && setTimerDur(readInputs()));
+    $(id).addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
+  });
+  $('#sheet-timer').addEventListener('click', e => {
+    if (!S) return;
+    const adj = e.target.closest('[data-adj]');
+    if (adj) {
+      const [unit, n] = adj.dataset.adj.split(':');
+      setTimerDur(S.timer.dur + Number(n) * (unit === 'm' ? 60 : 1));
+      return;
+    }
+    const pr = e.target.closest('[data-preset]');
+    if (pr) { const [m, label] = pr.dataset.preset.split(':'); setTimerDur(Number(m) * 60, label); return; }
+    const del = e.target.closest('[data-logdel]');
+    if (del) deleteLog(del.dataset.logdel);
+  });
+  $('#tPresets').innerHTML = PRESETS.map(([m, l]) => `<button class="tab" data-preset="${m}:${l}">${m} dk${l === 'Mola' ? ' mola' : ''}</button>`).join('');
   $('#mailBtn').onclick = () => openSheet('mail');
   $('#menuBtn').onclick = () => openSheet('menu');
   $('#doneDesign').onclick = exitDesign;
@@ -678,7 +1051,9 @@ function setupStatic() {
     if (ui.sheet) closeSheet();
     else if (ui.sel) { ui.sel = null; renderRoom(); }
   });
-  addEventListener('resize', () => { if (S) placeSelBar(); });
+  addEventListener('resize', () => { if (S) { placeSelBar(); placeRoomCtrls(); } });
+  // Oda alanı her boyut değiştirdiğinde (alt kart büyüyüp küçülünce de) köşe düğmeleri yerinde kalsın.
+  if ('ResizeObserver' in window) new ResizeObserver(() => { if (S) { placeSelBar(); placeRoomCtrls(); } }).observe($('#stageWrap'));
 
   $('#sheet-fridge').addEventListener('click', e => {
     const del = e.target.closest('[data-del]');

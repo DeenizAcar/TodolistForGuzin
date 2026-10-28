@@ -6,6 +6,9 @@ Buzdolabındaki post-it'lerle yapılacaklar listesi ve akşamları süslenen tat
 - **Dekorasyon:** Liste bitince **ve** akşam saati gelince (varsayılan 18:00) açılır. Kalplerle dükkandan eşya, duvar kağıdı ve zemin alınır, eşyalar sürükleyip yerleştirilir.
 - **Mektuplar:** Deniz panelden mektup yazar, içine kalp ya da sadece ondan gelen eşyalar (gül buketi, kalp balon, neon G ♡ D) koyar. Mektup kapının önünde zarf olarak belirir. İstersen ileri bir tarihe zamanlayabilirsin.
 - **Kapı tabelası:** Güzin ders çalışırken kapıdaki "Güzin" tabelasına dokunur, tabela sallanıp **DO NOT DISTURB** yüzüne döner. Deniz panelinde "ders çalışıyor, rahatsız etme" diye görünür. Unutulursa 12 saat sonra kendiliğinden düşer.
+- **Odak sayacı ve çalışma geçmişi:** kalbin solundaki ⏱ dakika:saniye ayarlanabilen bir sayaç (25/50 dk odak, 10/5 dk mola ön ayarları). Odak sayacı başlayınca kapıya tabela asılır. Tabela her kaldırıldığında "14:05 – 15:30 · 1 sa 25 dk" gibi bir kayıt düşer; bugün ve son 7 günün toplamı görünür. Deniz panelinde de görünür.
+- **Kedi:** odada kendi kendine oturur, gezinir, uyur (gece daha çok uyur); otururken gözleriyle fareyi takip eder. Tıklayınca ya da üstünde fare/parmak gezdirince mırlar, kalp saçar; her gün ilk sevişte +1 ♡.
+- **Perde ve ışık:** odanın sol üstündeki 🪟 ve 💡 düğmeleri (pencereye ve kapının yanındaki ışık anahtarına dokunmak da olur). Perde kapalıyken gündüz oda loşlaşır, ışık açıkken gece aydınlanır. Senin panelinde de aynı görünür.
 - **Düzenle (Deniz paneli):** kalp sayısını ayarlama, odadaki ve depodaki eşyaları, alınan duvar kağıtlarını, notları ve mektupları silme, odayı ilk günkü haline döndürme.
 - **Oda yaşar:** Pencere gerçek saate göre sabah, gündüz, gün batımı ve gece olur. Gece lambalar yanar, duvar saati gerçek saati gösterir, buzdolabındaki küçük post-it'ler bitmemiş notları gösterir.
 

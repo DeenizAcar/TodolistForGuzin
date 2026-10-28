@@ -56,6 +56,38 @@ export function fmtDur(min) {
   return m ? `${h} sa ${m} dk` : `${h} sa`;
 }
 
+// Sayaç: { dur: saniye, endAt: bitiş zamanı (çalışırken), left: kalan saniye (duraklatılmışken), label }
+export const timerState = t => (t?.endAt ? 'run' : typeof t?.left === 'number' ? 'pause' : 'idle');
+export function timerRemaining(t, at = Date.now()) {
+  if (t?.endAt) return Math.max(0, Math.ceil((t.endAt - at) / 1000));
+  if (typeof t?.left === 'number') return t.left;
+  return t?.dur || 25 * 60;
+}
+export const mmss = s => `${pad(Math.floor(s / 60))}:${pad(s % 60)}`;
+
+// Çalışma geçmişi: tabela her kaldırıldığında bir kayıt; tabela asılıyken süren oturum da listede.
+const GUN = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+export const hm = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+export const dayLabel = ms => { const d = new Date(ms); return `${d.getDate()} ${AY[d.getMonth()]} ${GUN[d.getDay()]}`; };
+export function studySessions(S, t = Date.now()) {
+  const list = Object.entries(S.studyLog || {})
+    .map(([id, e]) => ({ id, start: e.start, end: e.end }))
+    .filter(e => e.end > e.start);
+  if (dndActive(S, t)) list.push({ id: null, start: S.dnd.since, end: t, current: true });
+  return list.sort((a, b) => b.start - a.start);
+}
+export function studyTotals(sessions, t = Date.now()) {
+  const today = dayKey(new Date(t));
+  const weekAgo = t - 7 * 864e5;
+  let d = 0, w = 0;
+  for (const s of sessions) {
+    const m = (s.end - s.start) / 60000;
+    if (dayKey(new Date(s.start)) === today) d += m;
+    if (s.start >= weekAgo) w += m;
+  }
+  return { today: Math.floor(d), week: Math.floor(w) };
+}
+
 export const BONUS_MIN = 3;
 export const BONUS = 3;
 
@@ -91,9 +123,11 @@ export function skyPhase(d = now()) {
 // Eski verilerde eksik alan kalmasın.
 export function normalize(st) {
   const S = st || {};
-  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor']) {
+  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog']) {
     if (typeof S[k] !== 'object' || S[k] === null) S[k] = {};
   }
+  if (typeof S.timer !== 'object' || S.timer === null) S.timer = {};
+  if (!(S.timer.dur > 0)) S.timer.dur = 25 * 60;
   if (typeof S.hearts !== 'number') S.hearts = 0;
   S.wall ||= 'dots';
   S.floor ||= 'wood';

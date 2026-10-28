@@ -4,7 +4,10 @@ import { createStore, DEL } from './store.js';
 import { ITEMS, SHOP, GIFTS, WALLS, FLOORS, defaultState } from './catalog.js';
 import { roomSVG } from './room.js';
 import { setupServiceWorker } from './sw-update.js';
-import { dayKey, uid, now, fridgeList, unlockInfo, isDone, esc, fmtDate, normalize, pad, dndActive, fmtDur } from './logic.js';
+import {
+  dayKey, uid, now, fridgeList, unlockInfo, isDone, esc, fmtDate, normalize, pad, dndActive, fmtDur,
+  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals,
+} from './logic.js';
 
 const $ = s => document.querySelector(s);
 let store = null;
@@ -29,6 +32,8 @@ async function init() {
   if (store.mode === 'local') $('#localNote').hidden = false;
   store.start({ seed: defaultState, onUser, onState, onError });
   setInterval(() => S && render(), 30000);
+  // Sayaç çalışırken kalan süre saniye saniye güncellensin.
+  setInterval(() => { if (S && timerState(S.timer) === 'run') renderStudy(); }, 1000);
   setupServiceWorker();
 }
 
@@ -69,6 +74,28 @@ function render() {
   renderNotes();
   renderTodos();
   renderManage();
+  renderStudy();
+}
+
+function renderStudy() {
+  const t = S.timer || {};
+  const st = timerState(t);
+  const timerTxt = st === 'run' ? `⏱ ${t.label || 'Odak'} sayacı çalışıyor, <b>${mmss(timerRemaining(t))}</b> kaldı`
+    : st === 'pause' ? `⏸ ${t.label || 'Odak'} sayacı duraklatıldı (${mmss(timerRemaining(t))})`
+    : '⏱ Sayaç şu an çalışmıyor';
+  const list = studySessions(S);
+  const tot = studyTotals(list);
+  const rows = list.slice(0, 12).map(s => {
+    const min = Math.floor((s.end - s.start) / 60000);
+    return `<div class="tl-it"><span>${dayLabel(s.start)} · ${hm(s.start)} – ${s.current ? 'şimdi' : hm(s.end)}</span><small>${min < 1 ? '<1 dk' : fmtDur(min)}${s.current ? ' · şu an' : ''}</small></div>`;
+  }).join('');
+  $('#study').innerHTML = `
+    <div class="door">${timerTxt}</div>
+    <div class="stats" style="grid-template-columns:1fr 1fr">
+      <div class="stat"><b>${fmtDur(tot.today)}</b><span>bugün</span></div>
+      <div class="stat"><b>${fmtDur(tot.week)}</b><span>son 7 gün</span></div>
+    </div>
+    ${rows ? `<div class="tlist">${rows}</div>` : '<p class="mut small">Henüz çalışma kaydı yok. Güzin kapıya "Do not disturb" asıp kaldırınca burada görünür.</p>'}`;
 }
 
 function renderAcct() {

@@ -236,6 +236,76 @@ h3{font-size:15px;margin:18px 0 8px;font-weight:800;color:var(--acc)}
 @keyframes floatUp{to{transform:translate(var(--dx,0),-90px) scale(1.25);opacity:0}}
 .bubble{position:fixed;pointer-events:none;z-index:95;background:#fff;color:#6b3d52;border:2px solid #6b3d52;border-radius:14px;padding:4px 10px;font-weight:800;font-size:14px;animation:floatUp 1.4s ease-out forwards}
 
+/* ---------- Üst bar: sayaç ---------- */
+.brand .short{display:none}
+.timer-chip{display:flex;align-items:center;gap:5px;font-variant-numeric:tabular-nums}
+.timer-chip.run{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
+.timer-chip.paused{border-style:dashed}
+.timer-chip.ring{animation:ring .5s ease-in-out 10}
+@keyframes ring{0%,100%{transform:rotate(0)}25%{transform:rotate(-8deg) scale(1.08)}75%{transform:rotate(8deg) scale(1.08)}}
+@media (max-width:440px){.brand .long{display:none}.brand .short{display:inline}.top-r{gap:6px}.chip{padding:6px 10px}}
+
+/* ---------- Perde ve ışık düğmeleri ---------- */
+.room-ctrls{position:absolute;z-index:4;display:flex;gap:6px}
+.rc{width:38px;height:38px;border-radius:50%;border:2.5px solid #6b3d52;background:rgba(255,255,255,.9);font-size:17px;line-height:1;cursor:pointer;
+  display:grid;place-items:center;padding:0;box-shadow:0 3px 8px rgba(90,45,66,.18);transition:transform .12s,background .2s}
+.rc:hover{transform:scale(1.08)}
+.rc:active{transform:scale(.94)}
+#curtainBtn.on{background:#f9a8c7}
+#lightBtn.on{background:#ffe08a;box-shadow:0 0 0 4px rgba(255,224,138,.45),0 3px 8px rgba(90,45,66,.18)}
+#room .it-window,#room .light-switch{cursor:pointer}
+
+/* ---------- Kedi ---------- */
+#room .it-cat{cursor:pointer}
+.cat-eyes{transform-box:fill-box;transform-origin:50% 50%;animation:blink 5s infinite}
+@keyframes blink{0%,93%,100%{transform:scaleY(1)}96%{transform:scaleY(.1)}}
+.cat-tail2{transform-box:fill-box;transform-origin:0 100%;animation:tail 2.2s ease-in-out infinite}
+.cat-tail3{transform-box:fill-box;transform-origin:100% 100%;animation:tail3 .9s ease-in-out infinite alternate}
+@keyframes tail3{from{transform:rotate(-6deg)}to{transform:rotate(8deg)}}
+.leg{transform-box:fill-box;transform-origin:50% 0}
+.pose-walk .leg.la{animation:step .42s ease-in-out infinite alternate}
+.pose-walk .leg.lb{animation:step .42s ease-in-out infinite alternate-reverse}
+@keyframes step{from{transform:rotate(20deg)}to{transform:rotate(-20deg)}}
+.pose-walk .walk-bob{animation:wbob .21s ease-in-out infinite alternate}
+@keyframes wbob{to{transform:translateY(-2px)}}
+#room .it.pose-happy .art{animation:hop .4s ease-out 2}
+@keyframes hop{50%{transform:translateY(-8px) scale(1.04)}}
+
+/* ---------- Sayaç sayfası ---------- */
+.timer-face{background:var(--card);border:2px solid var(--line);border-radius:24px;padding:16px 14px;text-align:center}
+.timer-face.run{border-color:var(--acc2)}
+.t-mode{font-weight:800;color:var(--mut);font-size:14px}
+.t-disp{display:flex;align-items:center;justify-content:center;gap:4px;margin:6px 0 10px}
+.t-unit{display:flex;flex-direction:column;align-items:center}
+.t-unit input{width:2.6ch;font:inherit;font-size:58px;font-weight:800;line-height:1.05;text-align:center;color:var(--acc);background:transparent;border:0;
+  border-radius:14px;padding:0;outline:none;font-variant-numeric:tabular-nums;-moz-appearance:textfield;appearance:textfield}
+.t-unit input::-webkit-outer-spin-button,.t-unit input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.t-unit input:focus{background:var(--soft)}
+.t-unit input:disabled{opacity:1;color:var(--acc)}
+.t-colon{font-size:50px;font-weight:800;color:var(--acc);padding-bottom:6px}
+.t-adj{border:0;background:var(--soft);color:var(--acc);width:44px;height:26px;border-radius:10px;cursor:pointer;font-size:12px}
+.t-adj:disabled{visibility:hidden}
+.t-presets{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:12px}
+.t-presets .tab:disabled{opacity:.45;cursor:default}
+.t-btns{display:flex;gap:8px}
+.t-btns .b.big{flex:1}
+.t-note{margin:10px 0 0}
+
+/* Çalışma geçmişi */
+.log-tot{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.log-tot div{background:var(--soft);border-radius:16px;padding:10px;text-align:center}
+.log-tot b{display:block;font-size:19px;color:var(--acc)}
+.log-tot span{font-size:12px;color:var(--mut)}
+.log-day{display:flex;justify-content:space-between;align-items:baseline;margin:14px 2px 6px;font-size:14px}
+.log-day span{color:var(--mut);font-size:13px;font-weight:700}
+.log-row{display:flex;align-items:center;gap:10px;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:8px 10px 8px 14px;margin-bottom:6px;font-size:14px}
+.log-row.cur{border-color:var(--acc2);border-style:dashed}
+.log-t{font-weight:700;font-variant-numeric:tabular-nums}
+.log-d{color:var(--mut);margin-left:auto}
+.log-now{font-size:12px;font-weight:800;color:var(--acc);padding:2px 8px}
+.log-del{border:0;background:none;color:var(--mut);font-weight:800;font-size:15px;cursor:pointer;padding:2px 8px;border-radius:999px}
+.log-del.arm{background:#d9486f;color:#fff;font-size:12px}
+
 @media (max-width:420px){.brand{font-size:18px}.dock-btn{font-size:14px}}
 @media (max-height:520px) and (min-aspect-ratio:4/3){.today{display:none}.top{padding-top:6px}.dock{padding-bottom:6px}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}

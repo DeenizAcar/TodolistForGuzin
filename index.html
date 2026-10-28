@@ -23,8 +23,9 @@
 <body>
 <div id="app" class="app">
   <header class="top">
-    <div class="brand">Güzin'in Odası <span class="beat">♡</span></div>
+    <div class="brand"><span class="long">Güzin'in Odası</span><span class="short">Odam</span> <span class="beat">♡</span></div>
     <div class="top-r">
+      <button class="chip timer-chip" id="timerBtn" aria-label="Odak sayacı ve çalışma geçmişi"><span id="timerIc">⏱</span><span id="timerTxt">25:00</span></button>
       <button class="chip" id="heartsBtn" aria-label="Kalplerin">♡ 0</button>
       <button class="icon-btn" id="mailBtn" aria-label="Mektuplar">💌<span class="badge" id="mailBadge" hidden></span></button>
       <button class="icon-btn" id="menuBtn" aria-label="Ayarlar">⋯</button>
@@ -35,6 +36,10 @@
     <main class="stage-wrap" id="stageWrap">
       <svg id="room" viewBox="0 0 1000 900" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Güzin'in odası"></svg>
       <div class="sel-bar" id="selBar" hidden></div>
+      <div class="room-ctrls" id="roomCtrls" hidden>
+        <button class="rc" id="curtainBtn" aria-label="Perde" title="Perdeyi kapat">🪟</button>
+        <button class="rc" id="lightBtn" aria-label="Işık" title="Işığı aç">💡</button>
+      </div>
     </main>
     <aside class="drawer" id="drawer" hidden>
       <div class="dr-head">
@@ -71,6 +76,33 @@
     </div>
   </form>
   <div class="done-list" id="doneList"></div>
+</section>
+<section class="sheet" id="sheet-timer" hidden aria-label="Odak sayacı">
+  <div class="sheet-head"><h2>Odak sayacı ⏱</h2><button class="x" data-close aria-label="Kapat">×</button></div>
+  <div class="timer-face" id="timerFace">
+    <div class="t-mode" id="tMode">Odak</div>
+    <div class="t-disp">
+      <div class="t-unit">
+        <button class="t-adj" data-adj="m:1" aria-label="Bir dakika artır">▲</button>
+        <input id="tMin" type="number" inputmode="numeric" min="0" max="180" value="25" aria-label="Dakika">
+        <button class="t-adj" data-adj="m:-1" aria-label="Bir dakika azalt">▼</button>
+      </div>
+      <span class="t-colon">:</span>
+      <div class="t-unit">
+        <button class="t-adj" data-adj="s:10" aria-label="On saniye artır">▲</button>
+        <input id="tSec" type="number" inputmode="numeric" min="0" max="59" value="00" aria-label="Saniye">
+        <button class="t-adj" data-adj="s:-10" aria-label="On saniye azalt">▼</button>
+      </div>
+    </div>
+    <div class="t-presets" id="tPresets"></div>
+    <div class="t-btns">
+      <button class="b p big" id="tGo">Başlat</button>
+      <button class="b" id="tReset">Sıfırla</button>
+    </div>
+    <p class="mut small t-note">Odak sayacı başlayınca kapıya "Do not disturb" asılır. Tabelayı kaldırınca çalıştığın süre aşağıya yazılır.</p>
+  </div>
+  <h3>Çalışma geçmişi ♡</h3>
+  <div id="studyLog"></div>
 </section>
 <section class="sheet" id="sheet-info" hidden aria-label="Dekorasyon"></section>
 <section class="sheet" id="sheet-mail" hidden aria-label="Mektuplar"></section>

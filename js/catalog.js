@@ -63,7 +63,18 @@ function fridgeArt({ postits = [] } = {}) {
   ${notes}`;
 }
 
-function windowArt({ phase = 'day' } = {}) {
+// Kapalı perde: iki kanat camı tamamen örter, aralarından ince bir ışık sızar.
+function closedCurtains() {
+  const folds = x => `M${x} 14C${x + 3} 80 ${x - 3} 150 ${x} 220`;
+  return `
+  <path d="M6 10H138V222C124 228 112 223 98 228C84 223 72 228 58 223C44 228 30 223 18 228C12 226 8 224 6 222Z" fill="${C.pink}"/>
+  <path d="${folds(34)}${folds(64)}${folds(96)}${folds(122)}" fill="none" class="thin" style="opacity:.45"/>
+  <path d="M264 10H132V222C146 228 158 223 172 228C186 223 198 228 212 223C226 228 240 223 252 228C258 226 262 224 264 222Z" fill="${C.pink}"/>
+  <path d="${folds(148)}${folds(176)}${folds(206)}${folds(236)}" fill="none" class="thin" style="opacity:.45"/>
+  <path class="ns" d="${heart(135, 100, 22)}" fill="${C.rose}"/>`;
+}
+
+function windowArt({ phase = 'day', curtain = false } = {}) {
   let deco = '';
   if (phase === 'day') deco = `<circle class="ns" cx="188" cy="72" r="20" fill="${C.yellow}"/>${cloud(78, 84)}${cloud(150, 156, .7)}`;
   else if (phase === 'dawn') deco = `<circle class="ns" cx="96" cy="176" r="24" fill="#ffd27a"/>${cloud(150, 80, .8, '#fff7fb')}`;
@@ -80,17 +91,28 @@ function windowArt({ phase = 'day' } = {}) {
   <rect x="130" y="34" width="10" height="166" fill="#fff"/>
   <rect x="44" y="112" width="182" height="10" fill="#fff"/>
   <rect x="18" y="204" width="234" height="18" rx="8" fill="#fff"/>
+  ${curtain ? closedCurtains() : `
   <path d="M6 10H62C58 60 40 120 36 150C44 180 52 205 54 226H6Z" fill="${C.pink}"/>
   <path d="M20 14C22 60 20 110 18 146M18 162C22 190 26 210 26 222" fill="none" class="thin" style="opacity:.5"/>
   <rect x="2" y="142" width="40" height="13" rx="6" fill="${C.rose}"/>
   <path d="M264 10H208C212 60 230 120 234 150C226 180 218 205 216 226H264Z" fill="${C.pink}"/>
   <path d="M250 14C248 60 250 110 252 146M252 162C248 190 244 210 244 222" fill="none" class="thin" style="opacity:.5"/>
-  <rect x="228" y="142" width="40" height="13" rx="6" fill="${C.rose}"/>
+  <rect x="228" y="142" width="40" height="13" rx="6" fill="${C.rose}"/>`}
   <rect x="0" y="3" width="270" height="11" rx="5.5" fill="${C.wood}"/>`;
 }
 
 // Kapıdaki tabela: dokununca "Güzin" ile "DO NOT DISTURB" arasında döner.
-function doorArt({ dnd = false, swing = false } = {}) {
+// Kapının solundaki duvarda ışık düğmesi (açıkken üst taraf basılı ve sarı).
+function lightSwitch(on) {
+  return `<g class="light-switch" data-act="light" transform="translate(-50 168)">
+    <rect class="ns" x="-10" y="-10" width="56" height="74" fill="transparent"/>
+    <rect x="0" y="0" width="36" height="54" rx="9" fill="#fff"/>
+    <rect x="10" y="9" width="16" height="36" rx="6" fill="${on ? C.yellow : '#f3e6ec'}" class="thin"/>
+    <rect x="12" y="${on ? 11 : 27}" width="12" height="16" rx="4.5" fill="${on ? '#fff6c9' : '#fff'}" class="thin"/>
+  </g>`;
+}
+
+function doorArt({ dnd = false, swing = false, light = false } = {}) {
   const font = 'font-family="Nunito, sans-serif" font-weight="800" text-anchor="middle"';
   const sign = dnd
     ? `<path d="M50 50L85 28L120 50" fill="none" class="thin"/>
@@ -113,7 +135,8 @@ function doorArt({ dnd = false, swing = false } = {}) {
     <rect class="ns" x="22" y="20" width="126" height="102" fill="transparent"/>
     ${sign}
     <circle class="ns" cx="85" cy="28" r="3.5" fill="${C.ink}"/>
-  </g>`;
+  </g>
+  ${lightSwitch(light)}`;
 }
 
 /* ---------- Mobilyalar ---------- */
@@ -324,7 +347,7 @@ const smallPlantArt = `
   <path d="M12 46H52L47 78H17Z" fill="${C.peach}"/>
   <path class="ns" d="${heart(32, 54, 14)}" fill="#fff" opacity=".8"/>`;
 
-const catArt = `
+const catSleepArt = `
   <g class="cat-tail"><path d="M100 82C130 82 130 50 112 46" fill="none" style="stroke-width:14"/><path d="M100 82C130 82 130 50 112 46" fill="none" style="stroke:#ffd3a8;stroke-width:8"/></g>
   <path d="M14 38L16 8L38 28Z" fill="#ffd3a8"/>
   <path d="M40 26L54 4L62 34Z" fill="#ffd3a8"/>
@@ -341,6 +364,63 @@ const catArt = `
   <ellipse class="thin" cx="82" cy="94" rx="12" ry="6" fill="#ffd3a8"/>
   <text class="zzz" x="70" y="24" font-size="18" font-weight="800" fill="#a7748b" font-family="Nunito, sans-serif">z</text>
   <text class="zzz z2" x="84" y="12" font-size="13" font-weight="800" fill="#a7748b" font-family="Nunito, sans-serif">z</text>`;
+
+// Kedinin diğer pozları (aynı 132×100 kutuda, böylece pozlar arasında yer değiştirmez).
+const CAT = '#ffd3a8', CAT_D = '#f0a96a', CAT_L = '#fff1e0', CAT_FAR = '#f5c193';
+
+// Oturan kedi: göz kırpar, gözleri fareye bakar (look = [dx, dy]); mutluyken gözleri ^^ olur.
+function catSitArt({ look = [0, 0], happy = false } = {}) {
+  const [lx, ly] = look;
+  const eyes = happy
+    ? '<path d="M52 36Q57 29 62 36M70 36Q75 29 80 36" fill="none" style="stroke-width:2.8"/>'
+    : `<g class="cat-eyes"><g transform="translate(${r1(lx)} ${r1(ly)})">
+        <ellipse class="ns" cx="57" cy="34" rx="3.8" ry="4.8" fill="${C.ink}"/><ellipse class="ns" cx="75" cy="34" rx="3.8" ry="4.8" fill="${C.ink}"/>
+        <circle class="ns" cx="58.4" cy="32.2" r="1.4" fill="#fff"/><circle class="ns" cx="76.4" cy="32.2" r="1.4" fill="#fff"/></g></g>`;
+  const bl = happy ? ['7', '4.2', '.85'] : ['5.5', '3.2', '.55'];
+  return `
+  <g class="cat-tail2"><path d="M86 94C114 96 122 70 108 58" fill="none" style="stroke-width:14"/><path d="M86 94C114 96 122 70 108 58" fill="none" style="stroke:${CAT};stroke-width:8"/></g>
+  <path d="M42 98C36 74 44 52 66 52C88 52 96 74 90 98Z" fill="${CAT}"/>
+  <ellipse class="ns" cx="66" cy="80" rx="12" ry="15" fill="${CAT_L}"/>
+  <path d="M46 32L47 6L64 20Z" fill="${CAT}"/><path d="M86 32L85 6L68 20Z" fill="${CAT}"/>
+  <path class="ns" d="M50 26L50.5 13L59 20Z" fill="${C.blush}" opacity=".7"/><path class="ns" d="M82 26L81.5 13L73 20Z" fill="${C.blush}" opacity=".7"/>
+  <circle cx="66" cy="34" r="24" fill="${CAT}"/>
+  <path d="M60 13Q62 18 60 22M66 11V20M72 13Q70 18 72 22" fill="none" class="thin" style="stroke:${CAT_D}"/>
+  ${eyes}
+  <path class="ns" d="M63 41H69L66 44Z" fill="${C.blush}"/>
+  <path d="M66 44Q63 48 59 46M66 44Q69 48 73 46" fill="none" class="thin"/>
+  <ellipse class="ns" cx="49" cy="43" rx="${bl[0]}" ry="${bl[1]}" fill="${C.blush}" opacity="${bl[2]}"/>
+  <ellipse class="ns" cx="83" cy="43" rx="${bl[0]}" ry="${bl[1]}" fill="${C.blush}" opacity="${bl[2]}"/>
+  <path d="M41 40H31M41 44L32 47M91 40H101M91 44L100 47" fill="none" class="thin" style="opacity:.45"/>
+  <ellipse class="thin" cx="56" cy="96" rx="9" ry="5.5" fill="${CAT}"/><ellipse class="thin" cx="76" cy="96" rx="9" ry="5.5" fill="${CAT}"/>`;
+}
+
+// Yürüyen kedi (yana bakar, sağa doğru). Bacaklar CSS ile adım atar.
+function catWalkArt() {
+  const leg = (x, cls, fill) => `<g class="leg ${cls}"><rect x="${x}" y="68" width="11" height="30" rx="5.5" fill="${fill}"/></g>`;
+  return `
+  <g class="walk-bob">
+  <g class="cat-tail3"><path d="M32 60C14 56 8 36 18 22" fill="none" style="stroke-width:13"/><path d="M32 60C14 56 8 36 18 22" fill="none" style="stroke:${CAT};stroke-width:7"/></g>
+  ${leg(38, 'la', CAT_FAR)}${leg(84, 'lb', CAT_FAR)}
+  <ellipse cx="60" cy="62" rx="36" ry="19" fill="${CAT}"/>
+  <path d="M48 46Q52 54 48 62M62 44Q66 53 62 62M76 46Q80 54 76 62" fill="none" class="thin" style="stroke:${CAT_D}"/>
+  ${leg(48, 'lb', CAT)}${leg(94, 'la', CAT)}
+  <path d="M90 34L92 10L106 26Z" fill="${CAT}"/><path d="M108 30L118 8L122 34Z" fill="${CAT}"/>
+  <path class="ns" d="M93 28L94 16L102 25Z" fill="${C.blush}" opacity=".7"/>
+  <circle cx="104" cy="44" r="21" fill="${CAT}"/>
+  <ellipse class="ns" cx="111" cy="42" rx="3.2" ry="4.3" fill="${C.ink}"/><circle class="ns" cx="112.2" cy="40.5" r="1.2" fill="#fff"/>
+  <path class="ns" d="M121 47L125.5 48.5L122 51Z" fill="${C.blush}"/>
+  <path d="M122 51Q120 55 116 54" fill="none" class="thin"/>
+  <ellipse class="ns" cx="111" cy="52" rx="5" ry="3" fill="${C.blush}" opacity=".55"/>
+  <path d="M124 50H131M123 54L130 56" fill="none" class="thin" style="opacity:.45"/>
+  </g>`;
+}
+
+function catArt({ pose = 'sleep', look } = {}) {
+  if (pose === 'sit') return catSitArt({ look });
+  if (pose === 'happy') return catSitArt({ happy: true });
+  if (pose === 'walk') return catWalkArt();
+  return catSleepArt;
+}
 
 const teddyArt = `
   <circle cx="24" cy="20" r="12" fill="#d9a273"/><circle cx="68" cy="20" r="12" fill="#d9a273"/>
@@ -537,6 +617,10 @@ export function defaultState() {
     unlock: {},
     settings: { eveningHour: 18 },
     stats: { done: 0 },
+    curtain: false,
+    light: false,
+    timer: { dur: 25 * 60, label: 'Odak' },
+    studyLog: {},
     createdAt: Date.now(),
   };
 }
