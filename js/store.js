@@ -37,7 +37,9 @@ function localStore() {
   const KEY = 'oda_v1_' + ROOM_ID;
   let state = null;
   let h = null;
+  const PKEY = 'oda_v1_photos_' + ROOM_ID;
   const read = () => { try { return JSON.parse(localStorage.getItem(KEY)); } catch (e) { return null; } };
+  const readPhotos = () => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch (e) { return {}; } };
   const write = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} };
   return {
     mode: 'local',
@@ -46,9 +48,11 @@ function localStore() {
       state = read();
       if (!state) { state = h.seed(); write(); }
       h.onUser({ local: true, name: 'Yerel mod' });
+      h.onPhotos?.(readPhotos());
       h.onState(clone(state));
       // Aynı tarayıcıda açık diğer sekmeler (ör. Deniz paneli) değişince güncelle.
       addEventListener('storage', e => {
+        if (e.key === PKEY) { h.onPhotos?.(readPhotos()); return; }
         if (e.key !== KEY || !e.newValue) return;
         try { state = JSON.parse(e.newValue); h.onState(clone(state)); } catch (err) {}
       });
@@ -63,6 +67,19 @@ function localStore() {
       state = clone(data);
       write();
       h.onState(clone(state));
+    },
+    // Fotoğraflar ayrı tutulur (oda belgesi küçük kalsın).
+    async putPhoto(id, data) {
+      const all = readPhotos();
+      all[id] = data;
+      try { localStorage.setItem(PKEY, JSON.stringify(all)); } catch (e) { throw new Error('Tarayıcıda yer kalmadı'); }
+      h.onPhotos?.(all);
+    },
+    async delPhoto(id) {
+      const all = readPhotos();
+      delete all[id];
+      try { localStorage.setItem(PKEY, JSON.stringify(all)); } catch (e) {}
+      h.onPhotos?.(all);
     },
     async signIn() {},
     async signOut() {},
@@ -87,7 +104,9 @@ async function cloudStore() {
     db = F.getFirestore(app);
   }
   const ref = F.doc(db, 'rooms', ROOM_ID);
+  const photosCol = F.collection(db, 'rooms', ROOM_ID, 'photos');
   let unsub = null;
+  let unsubPhotos = null;
   let h = null;
   const toFb = v => (v && v.__op === 'del' ? F.deleteField() : v && v.__op === 'inc' ? F.increment(v.n) : v);
 
@@ -98,8 +117,16 @@ async function cloudStore() {
       A.getRedirectResult(auth).catch(err => h.onError(err));
       A.onAuthStateChanged(auth, user => {
         if (unsub) { unsub(); unsub = null; }
+        if (unsubPhotos) { unsubPhotos(); unsubPhotos = null; }
         h.onUser(user ? { email: user.email, name: user.displayName, photo: user.photoURL } : null);
         if (!user) return;
+        if (h.onPhotos) {
+          unsubPhotos = F.onSnapshot(photosCol, qs => {
+            const all = {};
+            qs.forEach(d => { all[d.id] = d.data().data; });
+            h.onPhotos(all);
+          }, err => console.warn('Fotoğraflar okunamadı', err));
+        }
         unsub = F.onSnapshot(ref, snap => {
           if (!snap.exists()) {
             // Belge hiç yoksa (ilk açılış) varsayılan odayı oluştur.
@@ -122,6 +149,12 @@ async function cloudStore() {
     },
     replace(data) {
       return F.setDoc(ref, data).catch(err => h.onError(err));
+    },
+    putPhoto(id, data) {
+      return F.setDoc(F.doc(photosCol, id), { data, createdAt: Date.now() });
+    },
+    delPhoto(id) {
+      return F.deleteDoc(F.doc(photosCol, id)).catch(() => {});
     },
     async signIn() {
       const p = new A.GoogleAuthProvider();

@@ -153,7 +153,7 @@ export function skyPhase(d = now()) {
 // Eski verilerde eksik alan kalmasın.
 export function normalize(st) {
   const S = st || {};
-  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog']) {
+  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog', 'trash']) {
     if (typeof S[k] !== 'object' || S[k] === null) S[k] = {};
   }
   if (typeof S.timer !== 'object' || S.timer === null) S.timer = {};

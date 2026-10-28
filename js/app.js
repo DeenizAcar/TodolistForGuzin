@@ -1,7 +1,7 @@
 // Güzin'in odası: buzdolabı listesi, kalpler, akşam dekorasyonu, Deniz'den mektuplar.
 
 import { createStore, INC, DEL } from './store.js';
-import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, STAGE, defaultState, clampPos, spawnPos, thumbSVG, swatchSVG } from './catalog.js';
+import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, STAGE, TRASH_CAP, defaultState, clampPos, spawnPos, thumbSVG, swatchSVG, itemOn, clockAngles } from './catalog.js';
 import { roomSVG } from './room.js';
 import { setupServiceWorker } from './sw-update.js';
 import {
@@ -25,6 +25,7 @@ const ui = {
 };
 
 const act = ops => store.apply(ops);
+let photoData = {};
 
 // Sayaç ön ayarları: [dakika, tür]. "Mola" başlatınca kapıya tabela asılmaz.
 const PRESETS = [[25, 'Odak'], [50, 'Odak'], [10, 'Mola'], [5, 'Mola']];
@@ -47,9 +48,10 @@ async function init() {
     return;
   }
   if (store.mode === 'local') $('#localNote').hidden = false;
-  store.start({ seed: defaultState, onUser, onState, onError });
+  store.start({ seed: defaultState, onUser, onState, onError, onPhotos: all => { photoData = all || {}; if (S) { renderRoom(); if (ui.sheet === 'photos') renderPhotos(); } } });
   setInterval(() => tick(false), 15000);
   setInterval(timerTick, 250);
+  setInterval(clockTick, 1000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) tick(true); });
   setupServiceWorker();
 }
@@ -146,10 +148,12 @@ function renderRoom() {
   const d = now();
   const { open } = fridgeList(S, dayKey(d));
   syncCats();
+  syncFlyers();
   svg.innerHTML = roomSVG(S, {
     now: d, design: ui.design, selected: ui.design ? ui.sel : null,
     postits: open.map(t => safeColor(t.color)), unread: unreadNotes(S).length,
-    dnd: dndActive(S), swing: Date.now() < ui.swingUntil, overrides: catOverrides(),
+    dnd: dndActive(S), swing: Date.now() < ui.swingUntil,
+    overrides: ui.design ? null : { ...catOverrides(), ...flyerOverrides() }, photoData,
   });
   placeSelBar();
   placeRoomCtrls();
@@ -231,7 +235,9 @@ function closeSheet() {
 
 function renderSheet() {
   if (!ui.sheet || !S) return;
-  ({ fridge: renderFridge, info: renderInfo, mail: renderMail, menu: renderMenu, timer: renderTimerSheet })[ui.sheet]();
+  // Klasör sayfası dosya listesini sadece açılınca/gezinince okur (her güncellemede değil).
+  ({ fridge: renderFridge, info: renderInfo, mail: renderMail, menu: renderMenu, timer: renderTimerSheet,
+     photos: renderPhotos, trash: renderTrash, folder: () => {} })[ui.sheet]();
 }
 
 function renderFridge() {
@@ -330,6 +336,10 @@ function renderMenu() {
       <li>Ders çalışırken kapıdaki <b>Güzin</b> tabelasına dokun ya da <b>⏱ sayacı</b> başlat: <b>Do not disturb</b> asılır, Deniz de görür. Bitince tabelaya tekrar dokun; ne kadar çalıştığın sayacın altındaki geçmişe yazılır.</li>
       <li><b>Kediyi</b> tıklayarak ya da üstünde parmağını/fareni gezdirerek sev. Her gün ilk sevişte <b>+1 ♡</b>.</li>
       <li>Sol üstteki <b>🪟</b> perdeyi, <b>💡</b> ışığı açıp kapatır. Pencereye ve kapının yanındaki düğmeye dokunmak da olur.</li>
+      <li>Lambalara, rafdaki muma, ışık zincirine dokun: açılır/kapanır. Bir şey içerken <b>kupaya</b> dokun, buharı tütsün ☕</li>
+      <li><b>Tabloya</b> ve <b>fotoğraf ipine</b> dokunup kendi fotoğraflarını koyabilirsin.</li>
+      <li><b>Kitaplara</b> dokunup bilgisayarından bir klasör ya da bir bağlantı (Drive gibi) bağla; sonra dokununca açılır.</li>
+      <li><b>Çöp kutusu</b> alırsan sildiğin notlar orada birikir, geri alabilirsin. Dolunca boşaltman gerekir.</li>
       <li>Kapının önünde zarf görürsen aç, içinde hediye olabilir 💌</li>
     </ul>
     ${S ? `<p class="mut small" style="text-align:center;margin-top:16px">Şimdiye kadar ${S.stats?.done || 0} not bitirdin ♡</p>` : ''}`;
@@ -381,10 +391,23 @@ function undoTodo(id) {
   act(ops);
 }
 
+const hasTrashBin = () => Object.values(S.placed).some(p => p.item === 'trash');
+
 function deleteTodo(id) {
   if (ui.delArm === id) {
     clearTimeout(ui.delT);
     ui.delArm = null;
+    const t = S.todos[id];
+    // Odada çöp kutusu varsa silinen not oraya gider; dolunca önce boşaltmak gerekir.
+    if (t && hasTrashBin()) {
+      if (Object.keys(S.trash).length >= TRASH_CAP) {
+        toast('🗑️ Çöp kutusu dolu! Önce boşalt (odadaki çöp kutusuna dokun)');
+        renderFridge();
+        return;
+      }
+      act([[`todos.${id}`, DEL], [`trash.${id}`, { text: t.text, color: safeColor(t.color), repeat: !!t.repeat, deletedAt: Date.now() }]]);
+      return;
+    }
     act([[`todos.${id}`, DEL]]);
     return;
   }
@@ -401,6 +424,7 @@ function enterDesign() {
   ui.design = true;
   ui.sel = null;
   cats.clear();
+  flyers.clear();
   appEl.classList.add('design');
   $('#drawer').hidden = false;
   closeSheet();
@@ -418,7 +442,7 @@ function exitDesign() {
 function shopCard(id, live) {
   const d = ITEMS[id];
   const ok = S.hearts >= d.price;
-  return `<button class="card-it" ${live ? `data-buy="${id}"` : ''} ${live && ok ? '' : 'disabled'}><div class="th">${thumbSVG(id)}</div><div class="nm">${esc(d.name)}</div><div class="pr">${d.price} ♡</div></button>`;
+  return `<button class="card-it" ${live ? `data-buy="${id}"` : ''} ${live && ok ? '' : 'disabled'}>${d.tag ? `<span class="tag">${esc(d.tag)}</span>` : ''}<div class="th">${thumbSVG(id)}</div><div class="nm">${esc(d.name)}</div><div class="pr">${d.price} ♡</div></button>`;
 }
 
 function swatchCard(kind, k, w) {
@@ -582,6 +606,14 @@ function onRoomClick(e) {
   if (item === 'door' && unreadNotes(S).length) { openSheet('mail'); return; }
   if (item === 'window') { toggleCurtain(); return; }
   if (item === 'cat') { petCat(g.dataset.pid, e.clientX, e.clientY, false); return; }
+  const pid = g.dataset.pid, def = ITEMS[item];
+  const sub = e.target.closest('[data-act]')?.dataset.act;
+  if (sub === 'candle') { toggleItem(pid); return; }
+  if (sub === 'books' || (def?.folder && item !== 'shelf')) { openFolder(pid); return; }
+  if (def?.photos) { openPhotos(pid); return; }
+  if (item === 'trash') { openSheet('trash'); return; }
+  if (item === 'appa') { yipYip(pid, e.clientX, e.clientY); return; }
+  if (def && 'toggle' in def && item !== 'shelf') { toggleItem(pid); return; }
   g.classList.remove('wiggle');
   g.getBoundingClientRect();
   g.classList.add('wiggle');
@@ -693,6 +725,372 @@ function petCat(pid, x, y, soft) {
     act([['petDay', day], ['hearts', INC(1)]]);
     toast('Kedi seni çok sevdi ♡ Bugünün kedi kalbi: +1 ♡');
   }
+}
+
+/* ---------- Açılıp kapanan eşyalar ve saat ---------- */
+
+function toggleItem(pid) {
+  const p = S.placed[pid];
+  const def = p && ITEMS[p.item];
+  if (!def) return;
+  const on = !itemOn(p, def);
+  act([[`placed.${pid}.on`, on]]);
+  if (on && (p.item === 'mug' || p.item === 'teapot')) toast(p.item === 'mug' ? '☕ Afiyet olsun ♡' : '🍵 Yasemin çayı demleniyor ♡');
+}
+
+// Duvar saatleri gerçek saat gibi her saniye ilerler.
+function clockTick() {
+  if (!S || document.hidden) return;
+  const clocks = svg.querySelectorAll('.it-clock');
+  if (!clocks.length) return;
+  const a = clockAngles(now());
+  clocks.forEach(g => {
+    g.querySelector('.clock-h')?.setAttribute('transform', `rotate(${a.h} 52 52)`);
+    g.querySelector('.clock-m')?.setAttribute('transform', `rotate(${a.m} 52 52)`);
+    g.querySelector('.clock-s')?.setAttribute('transform', `rotate(${a.s} 52 52)`);
+  });
+}
+
+/* ---------- Appa: odada süzülerek uçar ---------- */
+
+const flyers = new Map();
+let flyRAF = 0;
+let flyLast = 0;
+
+function syncFlyers() {
+  const ids = Object.entries(S.placed).filter(([, p]) => p.item === 'appa').map(([pid]) => pid);
+  for (const id of [...flyers.keys()]) if (!ids.includes(id)) flyers.delete(id);
+  if (ui.design) return;
+  const t = performance.now();
+  for (const id of ids) {
+    if (flyers.has(id)) continue;
+    const p = S.placed[id];
+    flyers.set(id, { x: p.x, y: p.y, flip: !!p.flip, mode: 'float', until: t + rand(2000, 5000) });
+  }
+  if (flyers.size && !flyRAF && !reduceMotion) { flyLast = t; flyRAF = requestAnimationFrame(flyLoop); }
+}
+
+function flyerOverrides() {
+  const o = {};
+  for (const [id, f] of flyers) o[id] = { x: Math.round(f.x), y: Math.round(f.y), flip: f.flip };
+  return o;
+}
+
+function flyLoop(ts) {
+  flyRAF = 0;
+  if (ui.design || !S || !flyers.size) return;
+  const dt = Math.min(0.1, (ts - flyLast) / 1000);
+  flyLast = ts;
+  const { W, WALL } = STAGE, d = ITEMS.appa;
+  for (const [id, f] of flyers) {
+    const x0 = f.x, y0 = f.y, flip0 = f.flip;
+    if (f.mode === 'fly') {
+      const dx = f.tx - f.x, dy = f.ty - f.y, dist = Math.hypot(dx, dy);
+      // Kalkışta ve inişte yavaşlar.
+      const step = Math.max(18, Math.min(60, dist * .9)) * dt;
+      if (dist <= step) { f.mode = 'float'; f.until = ts + rand(4000, 9000); }
+      else { f.x += dx / dist * step; f.y += dy / dist * step; }
+    } else if (ts > f.until) {
+      let tx = rand(0, W - d.w);
+      if (Math.abs(tx - f.x) < 160) tx = Math.max(0, Math.min(W - d.w, f.x + (tx >= f.x ? 260 : -260)));
+      f.tx = tx;
+      f.ty = rand(20, WALL - 40 - d.h / 2);
+      f.flip = tx < f.x;
+      f.mode = 'fly';
+    }
+    if (f.x !== x0 || f.y !== y0 || f.flip !== flip0) {
+      const g = svg.querySelector(`[data-pid="${id}"]`);
+      if (!g) continue;
+      g.setAttribute('transform', `translate(${Math.round(f.x)} ${Math.round(f.y)})`);
+      g.classList.toggle('pose-fly', f.mode === 'fly');
+      if (f.flip !== flip0) {
+        const art = d.art({});
+        g.querySelector('.art').innerHTML = f.flip ? `<g transform="translate(${d.w} 0) scale(-1 1)">${art}</g>` : art;
+      }
+    }
+  }
+  flyRAF = requestAnimationFrame(flyLoop);
+}
+
+function yipYip(pid, x, y) {
+  bubble(['Yip yip! ♡', 'Mööö ♡', '☁ ♡'][Math.floor(Math.random() * 3)], x, y);
+  sparkHearts(x, y, 4);
+  const f = flyers.get(pid);
+  if (f && f.mode === 'float') f.until = 0;
+}
+
+/* ---------- Tablo ve fotoğraf ipi: fotoğraflar ---------- */
+
+function openPhotos(pid) {
+  ui.photoPid = pid;
+  openSheet('photos');
+}
+
+function renderPhotos() {
+  const p = S.placed[ui.photoPid];
+  const def = p && ITEMS[p.item];
+  const el = $('#sheet-photos');
+  if (!def) { closeSheet(); return; }
+  const ids = p.photos || [];
+  const slots = Array.from({ length: def.photos }, (_, i) => {
+    const src = ids[i] && photoData[ids[i]];
+    return `<div class="ph-slot">
+      <button class="ph-pic" data-ph="${i}" aria-label="${src ? 'Fotoğrafı değiştir' : 'Fotoğraf ekle'}">${src ? `<img src="${src}" alt="">` : '<span>＋<br><small>Fotoğraf ekle</small></span>'}</button>
+      ${src ? `<button class="ph-rm ${ui.phArm === i ? 'arm' : ''}" data-phrm="${i}">${ui.phArm === i ? 'Emin misin?' : 'Kaldır'}</button>` : ''}
+    </div>`;
+  }).join('');
+  el.innerHTML = `<div class="sheet-head"><h2>${esc(def.name)} 📷</h2><button class="x" data-close aria-label="Kapat">×</button></div>
+    <p class="mut small" style="margin:0 0 12px">${def.photos > 1 ? 'Mandallara asılacak fotoğrafları seç.' : 'Çerçeveye koyacağın fotoğrafı seç.'} Fotoğraflar küçültülüp odana kaydedilir, telefonda da görünür.</p>
+    <div class="ph-grid ${def.photos > 1 ? 'many' : ''}">${slots}</div>
+    <p class="small" id="phMsg"></p>`;
+}
+
+// Fotoğrafı küçült (uzun kenar en fazla 720 px, JPEG); veritabanına sığsın.
+async function compressImage(file, max = 720) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = rej; i.src = url; });
+    const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * k));
+    c.height = Math.max(1, Math.round(img.naturalHeight * k));
+    const g = c.getContext('2d');
+    g.fillStyle = '#fff';
+    g.fillRect(0, 0, c.width, c.height);
+    g.drawImage(img, 0, 0, c.width, c.height);
+    let q = .82, data = c.toDataURL('image/jpeg', q);
+    while (data.length > 650000 && q > .35) { q -= .12; data = c.toDataURL('image/jpeg', q); }
+    return data;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function onPhotoChosen(file) {
+  const pid = ui.photoPid, i = ui.photoSlot;
+  const p = S.placed[pid];
+  if (!file || !p) return;
+  const msg = $('#phMsg');
+  if (msg) msg.textContent = 'Fotoğraf hazırlanıyor ♡';
+  try {
+    const data = await compressImage(file);
+    const id = uid();
+    await store.putPhoto(id, data);
+    const ids = [...(p.photos || [])];
+    while (ids.length < ITEMS[p.item].photos) ids.push(null);
+    const old = ids[i];
+    ids[i] = id;
+    await act([[`placed.${pid}.photos`, ids]]);
+    if (old) store.delPhoto(old);
+    if (msg) msg.textContent = '';
+    toast('📷 Fotoğraf asıldı ♡');
+  } catch (e) {
+    console.error(e);
+    if (msg) msg.textContent = 'Bu fotoğraf eklenemedi, başka bir tane dener misin?';
+  }
+}
+
+function removePhoto(i) {
+  clearTimeout(ui.phT);
+  if (ui.phArm !== i) {
+    ui.phArm = i;
+    ui.phT = setTimeout(() => { ui.phArm = null; if (ui.sheet === 'photos') renderPhotos(); }, 3000);
+    renderPhotos();
+    return;
+  }
+  ui.phArm = null;
+  const p = S.placed[ui.photoPid];
+  if (!p) return;
+  const ids = [...(p.photos || [])];
+  const old = ids[i];
+  ids[i] = null;
+  act([[`placed.${ui.photoPid}.photos`, ids]]);
+  if (old) store.delPhoto(old);
+}
+
+/* ---------- Kitaplar: klasör ya da bağlantı ---------- */
+// Web sitesi Gezgin'i doğrudan açamaz; Chrome/Edge'in klasör erişimiyle klasörün içi odada listelenir,
+// dosyaya tıklayınca açılır. Klasör izni bu cihaza özeldir (IndexedDB). Bağlantı (Drive vb.) her cihazda çalışır.
+
+const folderDB = (() => {
+  let dbp = null;
+  const open = () => (dbp ||= new Promise((res, rej) => {
+    const r = indexedDB.open('oda-klasor', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('h');
+    r.onsuccess = () => res(r.result);
+    r.onerror = () => rej(r.error);
+  }));
+  const run = async (mode, fn) => {
+    const db = await open();
+    return new Promise((res, rej) => {
+      const tx = db.transaction('h', mode);
+      const req = fn(tx.objectStore('h'));
+      tx.oncomplete = () => res(req?.result);
+      tx.onerror = () => rej(tx.error);
+    });
+  };
+  return {
+    get: k => run('readonly', s => s.get(k)).catch(() => null),
+    set: (k, v) => run('readwrite', s => s.put(v, k)),
+    del: k => run('readwrite', s => s.delete(k)),
+  };
+})();
+const canPickFolder = () => 'showDirectoryPicker' in window;
+
+async function openFolder(pid) {
+  ui.folderPid = pid;
+  ui.folderStack = null;
+  ui.folderSetup = false;
+  openSheet('folder');
+  await renderFolder();
+}
+
+async function renderFolder() {
+  const pid = ui.folderPid;
+  const p = S.placed[pid];
+  const def = p && ITEMS[p.item];
+  const el = $('#sheet-folder');
+  if (!def) { closeSheet(); return; }
+  const head = `<div class="sheet-head"><h2>📚 ${esc(p.label || def.name)}</h2><button class="x" data-close aria-label="Kapat">×</button></div>`;
+  const handle = await folderDB.get(pid);
+  const link = p.link || '';
+
+  if (handle && !ui.folderSetup) {
+    let perm = 'prompt';
+    try { perm = await handle.queryPermission({ mode: 'read' }); } catch (e) {}
+    if (perm !== 'granted') {
+      el.innerHTML = head + `<p class="info-p">"<b>${esc(handle.name)}</b>" klasörünü açmak için tarayıcının izin vermesi gerekiyor.</p>
+        <button class="b p big" data-fd="grant">📂 Klasörü aç</button>${setupLinks(link, false, true)}`;
+      return;
+    }
+    ui.folderStack ||= [handle];
+    const dir = ui.folderStack[ui.folderStack.length - 1];
+    const entries = [];
+    try {
+      for await (const [name, h] of dir.entries()) if (!name.startsWith('.')) entries.push(h);
+    } catch (e) {
+      el.innerHTML = head + '<p class="info-p">Klasör okunamadı. Taşınmış ya da silinmiş olabilir.</p>' + setupLinks(link, true, true);
+      return;
+    }
+    entries.sort((a, b) => (a.kind === b.kind ? a.name.localeCompare(b.name, 'tr') : a.kind === 'directory' ? -1 : 1));
+    const crumbs = ui.folderStack.map((d, i) => `<button class="crumb" data-fd="up:${i}">${esc(d.name)}</button>`).join('<span>›</span>');
+    ui.folderEntries = entries;
+    el.innerHTML = head + `<div class="crumbs">${crumbs}</div>
+      <div class="files">${entries.length ? entries.map((h, i) => `<button class="file-row" data-fd="open:${i}"><span class="fi">${h.kind === 'directory' ? '📁' : fileIcon(h.name)}</span><span class="fn">${esc(h.name)}</span></button>`).join('') : '<div class="empty">Bu klasör boş.</div>'}</div>
+      ${link ? `<a class="b big" href="${esc(link)}" target="_blank" rel="noopener" style="display:block;text-align:center;margin-top:10px;text-decoration:none">🔗 Bağlantıyı aç</a>` : ''}
+      <button class="b" data-fd="setup" style="margin-top:10px">⚙ Klasörü değiştir</button>`;
+    return;
+  }
+
+  if (link && !ui.folderSetup) {
+    el.innerHTML = head + `<a class="b p big" href="${esc(link)}" target="_blank" rel="noopener" style="display:block;text-align:center;text-decoration:none">🔗 Klasörü aç ↗</a>
+      <p class="mut small" style="word-break:break-all">${esc(link)}</p>
+      <button class="b" data-fd="setup">⚙ Değiştir</button>`;
+    return;
+  }
+
+  el.innerHTML = head + `<p class="info-p">Bu kitaplara bir klasör bağla, sonra dokununca o klasör açılsın.</p>${setupLinks(link, true, !!(link || handle))}`;
+}
+
+function setupLinks(link, full, canClear) {
+  const pick = canPickFolder()
+    ? '<button class="b p big" data-fd="pick">📁 Bilgisayardan klasör seç</button><p class="mut small">Klasörün içindekiler burada listelenir, dosyaya dokununca açılır. Bu sadece bu bilgisayarda (Chrome/Edge) çalışır.</p>'
+    : '<p class="note-box small">Bu tarayıcı bilgisayar klasörü açmayı desteklemiyor (telefonlarda ve Safari\'de yok). Bilgisayarda Chrome ya da Edge ile seçebilirsin; burada bir bağlantı kullanabilirsin.</p>';
+  return `${full ? pick : ''}
+    <form class="link-form" id="linkForm">
+      <label class="mut small">🔗 Ya da bir bağlantı (Google Drive / OneDrive klasörü, ders sitesi…) — her cihazda çalışır</label>
+      <div class="inline"><input id="linkIn" type="text" inputmode="url" autocomplete="off" placeholder="https://…" value="${esc(link)}"><button class="b p" type="submit">Kaydet</button></div>
+    </form>
+    <label class="mut small">İsim (isteğe bağlı)</label>
+    <div class="inline"><input id="labelIn" maxlength="40" placeholder="ör. Vize notları" value="${esc(S.placed[ui.folderPid]?.label || '')}"><button class="b" data-fd="label">Kaydet</button></div>
+    ${canClear ? '<button class="b" data-fd="clear" style="margin-top:10px">Bağlantıyı kaldır</button>' : ''}`;
+}
+
+const fileIcon = n => (/\.(pdf)$/i.test(n) ? '📕' : /\.(png|jpe?g|gif|webp|heic)$/i.test(n) ? '🖼️' : /\.(docx?|odt|rtf|txt|md)$/i.test(n) ? '📝' : /\.(pptx?|key)$/i.test(n) ? '📊' : /\.(xlsx?|csv)$/i.test(n) ? '📈' : /\.(mp4|mov|mkv)$/i.test(n) ? '🎬' : /\.(mp3|m4a|wav)$/i.test(n) ? '🎵' : '📄');
+
+async function onFolderAction(a) {
+  const pid = ui.folderPid;
+  if (a === 'pick') {
+    try {
+      const h = await window.showDirectoryPicker({ id: 'oda-kitap', mode: 'read' });
+      await folderDB.set(pid, h);
+      ui.folderStack = null;
+      ui.folderSetup = false;
+      toast(`📚 "${h.name}" bu kitaplara bağlandı ♡`);
+    } catch (e) { if (e.name !== 'AbortError') toast('Klasör seçilemedi'); }
+  } else if (a === 'grant') {
+    const h = await folderDB.get(pid);
+    try { await h?.requestPermission({ mode: 'read' }); } catch (e) {}
+  } else if (a === 'setup') {
+    ui.folderSetup = true;
+  } else if (a === 'clear') {
+    await folderDB.del(pid);
+    act([[`placed.${pid}.link`, DEL]]);
+    ui.folderSetup = false;
+  } else if (a === 'label') {
+    const v = $('#labelIn')?.value.trim();
+    act([[`placed.${pid}.label`, v ? v : DEL]]);
+  } else if (a.startsWith('up:')) {
+    ui.folderStack = ui.folderStack.slice(0, Number(a.slice(3)) + 1);
+  } else if (a.startsWith('open:')) {
+    const h = ui.folderEntries?.[Number(a.slice(5))];
+    if (!h) return;
+    if (h.kind === 'directory') ui.folderStack.push(h);
+    else {
+      // Pencereyi hemen aç (tarayıcı engellemesin), dosya hazır olunca içine yükle.
+      const w = window.open('', '_blank');
+      try {
+        const f = await h.getFile();
+        const url = URL.createObjectURL(f);
+        if (w) w.location.href = url; else window.open(url, '_blank');
+      } catch (e) { w?.close(); toast('Dosya açılamadı'); }
+      return;
+    }
+  }
+  await renderFolder();
+}
+
+function saveLink() {
+  let v = $('#linkIn')?.value.trim() || '';
+  if (v && !/^https?:\/\//i.test(v)) v = 'https://' + v;
+  try { if (v) new URL(v); } catch (e) { toast('Bu bağlantı geçerli görünmüyor'); return; }
+  act([[`placed.${ui.folderPid}.link`, v || DEL]]);
+  ui.folderSetup = false;
+  toast(v ? '🔗 Bağlantı kaydedildi ♡' : 'Bağlantı kaldırıldı');
+  setTimeout(renderFolder, 50);
+}
+
+/* ---------- Çöp kutusu ---------- */
+
+function renderTrash() {
+  const list = Object.entries(S.trash).map(([id, t]) => ({ id, ...t })).sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+  const n = list.length, full = n >= TRASH_CAP;
+  $('#sheet-trash').innerHTML = `<div class="sheet-head"><h2>Çöp kutusu 🗑️</h2><button class="x" data-close aria-label="Kapat">×</button></div>
+    <div class="trash-meter"><div class="bar"><i style="width:${Math.round(Math.min(1, n / TRASH_CAP) * 100)}%"></i></div><span>${n}/${TRASH_CAP}${full ? ' · dolu!' : ''}</span></div>
+    ${full ? '<p class="info-p"><b>Çöp kutusu dolu.</b> Yeni not silebilmek için önce boşalt.</p>' : ''}
+    ${n ? `<div class="trash-list">${list.map(t => `<div class="trash-it" style="--c:${safeColor(t.color)};--tc:${inkFor(safeColor(t.color))}"><span>${esc(t.text)}</span><button class="b" data-trback="${t.id}">geri al</button></div>`).join('')}</div>
+      <button class="b danger big ${ui.trashArm ? 'arm' : ''}" data-trempty style="margin-top:12px">${ui.trashArm ? 'Emin misin? Hepsi silinecek' : '🗑️ Çöpü boşalt'}</button>`
+      : '<div class="empty">Çöp kutusu boş ♡<br>Buzdolabından sildiğin notlar burada birikir.</div>'}`;
+}
+
+function restoreTrash(id) {
+  const t = S.trash[id];
+  if (!t) return;
+  act([[`trash.${id}`, DEL], [`todos.${id}`, { text: t.text, color: safeColor(t.color), repeat: !!t.repeat, done: false, createdAt: Date.now() }]]);
+  toast('Not buzdolabına geri yapıştırıldı ♡');
+}
+
+function emptyTrash() {
+  clearTimeout(ui.trashT);
+  if (!ui.trashArm) {
+    ui.trashArm = true;
+    ui.trashT = setTimeout(() => { ui.trashArm = false; if (ui.sheet === 'trash') renderTrash(); }, 3000);
+    renderTrash();
+    return;
+  }
+  ui.trashArm = false;
+  act([['trash', DEL]]);
+  toast('Çöp boşaltıldı ✨');
 }
 
 /* ---------- Perde ve ışık ---------- */
@@ -1155,6 +1553,23 @@ function setupStatic() {
     if (e.target.closest('[data-back]')) { ui.letter = null; renderMail(); return; }
     const c = e.target.closest('[data-claim]');
     if (c) claimGift(c.dataset.claim);
+  });
+  $('#sheet-photos').addEventListener('click', e => {
+    const pic = e.target.closest('[data-ph]');
+    if (pic) { ui.photoSlot = Number(pic.dataset.ph); $('#photoFile').value = ''; $('#photoFile').click(); return; }
+    const rm = e.target.closest('[data-phrm]');
+    if (rm) removePhoto(Number(rm.dataset.phrm));
+  });
+  $('#photoFile').addEventListener('change', e => onPhotoChosen(e.target.files?.[0]));
+  $('#sheet-folder').addEventListener('click', e => {
+    const b = e.target.closest('[data-fd]');
+    if (b) { e.preventDefault(); onFolderAction(b.dataset.fd); }
+  });
+  $('#sheet-folder').addEventListener('submit', e => { if (e.target.id === 'linkForm') { e.preventDefault(); saveLink(); } });
+  $('#sheet-trash').addEventListener('click', e => {
+    const back = e.target.closest('[data-trback]');
+    if (back) { restoreTrash(back.dataset.trback); return; }
+    if (e.target.closest('[data-trempty]')) emptyTrash();
   });
   $('#sheet-menu').addEventListener('click', e => {
     if (e.target.closest('[data-theme]')) toggleTheme();

@@ -218,11 +218,15 @@ const poufArt = `
   <ellipse cx="58" cy="22" rx="52" ry="14" fill="#f8ecfe"/>
   <circle class="ns" cx="58" cy="22" r="4" fill="${C.lilacD}"/>`;
 
-const floorLampArt = `
+// Açılıp kapanabilen eşyalarda yanarken kullanılan renk.
+const LIT = '#fff3c4';
+
+const floorLampArt = ({ on = true } = {}) => `
   <ellipse cx="45" cy="280" rx="32" ry="8" fill="${C.woodD}"/>
   <rect x="41" y="66" width="8" height="212" rx="4" fill="#fff"/>
-  <path d="M16 76L28 8H62L74 76Z" fill="${C.pinkL}"/>
-  <path d="M22 44H68" fill="none" class="thin" style="stroke-dasharray:4 5"/>`;
+  <path d="M16 76L28 8H62L74 76Z" fill="${on ? LIT : C.pinkL}"/>
+  <path d="M22 44H68" fill="none" class="thin" style="stroke-dasharray:4 5"/>
+  <path d="M44 76V96" fill="none" class="thin"/><circle class="thin" cx="44" cy="99" r="3" fill="${C.rose}"/>`;
 
 const monsteraArt = (() => {
   const leaf = (cx, cy, rx, ry, rot, fill) => `<g transform="translate(${cx} ${cy}) rotate(${rot})"><ellipse rx="${rx}" ry="${ry}" fill="${fill}"/><path d="M${-rx + 5} 0H${rx - 5}" fill="none" class="thin" style="stroke:${C.greenD}"/></g>`;
@@ -256,13 +260,21 @@ const rugHeartArt = `
 
 /* ---------- Duvar süsleri ---------- */
 
-const paintingArt = `
+// Fotoğraf yuvası: verilen kutuya fotoğrafı kırparak yerleştirir.
+function photoSlot(pid, i, x, y, w, h, src) {
+  const id = `ph-${String(pid).replace(/[^a-z0-9_-]/gi, '')}-${i}`;
+  return `<defs><clipPath id="${id}"><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2"/></clipPath></defs>
+    <image href="${src}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="xMidYMid slice" clip-path="url(#${id})"/>`;
+}
+
+const paintingArt = ({ photos = [], pid = 'x' } = {}) => `
   <rect x="4" y="4" width="152" height="116" rx="8" fill="${C.wood}"/>
+  ${photos[0] ? `<rect x="16" y="16" width="128" height="92" rx="3" fill="#fff"/>${photoSlot(pid, 0, 16, 16, 128, 92, photos[0])}<rect x="16" y="16" width="128" height="92" rx="3" fill="none" class="thin"/>` : `
   <rect x="16" y="16" width="128" height="92" rx="3" fill="#d4ecff"/>
   <path class="ns" d="M17 86C40 62 66 62 90 84C106 72 126 70 143 80V107H17Z" fill="#a8dea3"/>
   <path class="ns" d="M17 98C50 84 90 90 143 96V107H17Z" fill="${C.green}"/>
   <path d="${heart(108, 26, 28)}" fill="${C.pink}" class="thin"/>
-  ${cloud(32, 44, .6)}`;
+  ${cloud(32, 44, .6)}`}`;
 
 const posterArt = `
   <rect x="6" y="8" width="112" height="150" rx="4" fill="#fff"/>
@@ -280,15 +292,22 @@ const mirrorArt = `
   <path d="M36 78L60 54M36 104L74 66" fill="none" style="stroke:#fff;stroke-width:7"/>
   <path class="ns" d="${heart(56, 3, 16)}" fill="${C.rose}"/>`;
 
-const shelfArt = `
+// Duvar rafı: kitaplar (dokununca klasör) ve mum (dokununca yanar/söner) ayrı ayrı tıklanır.
+const shelfArt = ({ on = true } = {}) => `
   <path d="M30 70H50L30 84Z" fill="${C.woodD}"/>
   <path d="M180 70H160L180 84Z" fill="${C.woodD}"/>
-  <rect class="thin" x="20" y="22" width="13" height="34" rx="2" fill="${C.pink}"/>
-  <rect class="thin" x="33" y="16" width="12" height="40" rx="2" fill="${C.blue}"/>
-  <rect class="thin" x="45" y="26" width="13" height="30" rx="2" fill="${C.yellow}"/>
-  <rect x="86" y="30" width="26" height="26" rx="7" fill="${C.cream}"/>
-  <path d="M99 30V24" fill="none" class="thin"/>
-  <path class="ns" d="M99 24Q93 16 99 8Q105 16 99 24Z" fill="#ffb36b"/>
+  <g data-act="books" class="hot">
+    <rect class="ns" x="14" y="10" width="50" height="48" fill="transparent"/>
+    <rect class="thin" x="20" y="22" width="13" height="34" rx="2" fill="${C.pink}"/>
+    <rect class="thin" x="33" y="16" width="12" height="40" rx="2" fill="${C.blue}"/>
+    <rect class="thin" x="45" y="26" width="13" height="30" rx="2" fill="${C.yellow}"/>
+  </g>
+  <g data-act="candle" class="hot">
+    <rect class="ns" x="80" y="2" width="38" height="56" fill="transparent"/>
+    <rect x="86" y="30" width="26" height="26" rx="7" fill="${C.cream}"/>
+    <path d="M99 30V24" fill="none" class="thin"/>
+    ${on ? `<path class="ns flame" d="M99 24Q93 16 99 8Q105 16 99 24Z" fill="#ffb36b"/>` : ''}
+  </g>
   <ellipse class="thin" cx="157" cy="30" rx="6" ry="11" fill="${C.green}" transform="rotate(-25 157 30)"/>
   <ellipse class="thin" cx="170" cy="28" rx="6" ry="11" fill="${C.green}" transform="rotate(25 170 28)"/>
   <path class="thin" d="M150 38H176L172 56H154Z" fill="${C.mint}"/>
@@ -297,8 +316,8 @@ const shelfArt = `
 const BULB = [C.yellow, C.pink, C.mint, C.lilac, C.blue];
 const FAIRY_PTS = [[[8, 10], [106, 54], [210, 16]], [[210, 16], [314, 54], [412, 10]]]
   .flatMap(s => [.14, .32, .5, .68, .86].map(t => qpt(...s, t)));
-const fairyArt = `<path d="M8 10Q106 54 210 16Q314 54 412 10" fill="none" class="thin"/>`
-  + FAIRY_PTS.map(([x, y], i) => `<g transform="translate(${x} ${y})"><rect class="ns" x="-3.5" y="-1" width="7" height="7" rx="1.5" fill="${C.ink}"/><ellipse class="thin" cx="0" cy="13" rx="7" ry="9" fill="${BULB[i % 5]}"/></g>`).join('');
+const fairyArt = ({ on = true } = {}) => `<path d="M8 10Q106 54 210 16Q314 54 412 10" fill="none" class="thin"/>`
+  + FAIRY_PTS.map(([x, y], i) => `<g transform="translate(${x} ${y})"><rect class="ns" x="-3.5" y="-1" width="7" height="7" rx="1.5" fill="${C.ink}"/><ellipse class="thin${on ? ' twinkle' : ''}" cx="0" cy="13" rx="7" ry="9" fill="${on ? BULB[i % 5] : '#ece6ea'}" style="animation-delay:${(i % 5) * .3}s"/></g>`).join('');
 
 const GAR = [[6, 10], [190, 46], [374, 10]];
 const garlandArt = `<path d="M6 10Q190 46 374 10" fill="none" class="thin"/>` + Array.from({ length: 9 }, (_, i) => {
@@ -308,18 +327,25 @@ const garlandArt = `<path d="M6 10Q190 46 374 10" fill="none" class="thin"/>` + 
 }).join('');
 
 const POL = [[4, 12], [190, 46], [376, 12]];
-const polaroidArt = `<path d="M4 12Q190 46 376 12" fill="none" class="thin"/>` + [
+const POLAROIDS = [
   [.18, -6, C.pinkL, `<path class="ns" d="${heart(0, 18, 28)}" fill="${C.rose}"/>`],
   [.39, 4, C.blue, `<circle class="ns" cx="0" cy="27" r="10" fill="${C.yellow}"/><path class="ns" d="M-24 54Q-4 34 24 54Z" fill="#a8dea3"/>`],
   [.61, -3, C.mint, [0, 72, 144, 216, 288].map(a => `<circle class="ns" cx="${r1(Math.sin(a * Math.PI / 180) * 9)}" cy="${r1(31 - Math.cos(a * Math.PI / 180) * 9)}" r="6.5" fill="#fff"/>`).join('') + `<circle class="ns" cx="0" cy="31" r="5" fill="${C.yellow}"/>`],
   [.82, 6, C.lilac, `<circle class="ns" cx="-8" cy="27" r="3" fill="${C.ink}"/><circle class="ns" cx="8" cy="27" r="3" fill="${C.ink}"/><path d="M-8 36Q0 43 8 36" fill="none" class="thin"/>`],
-].map(([t, rot, col, icon]) => {
+];
+const polaroidArt = ({ photos = [], pid = 'x' } = {}) => `<path d="M4 12Q190 46 376 12" fill="none" class="thin"/>` + POLAROIDS.map(([t, rot, col, icon], i) => {
   const [x, y] = qpt(...POL, t);
-  return `<g transform="translate(${x} ${y - 2}) rotate(${rot})"><rect x="-30" y="2" width="60" height="72" rx="3" fill="#fff"/><rect class="ns" x="-24" y="8" width="48" height="46" fill="${col}"/>${icon}<rect class="thin" x="-4" y="-8" width="8" height="18" rx="2" fill="${C.wood}"/></g>`;
+  const inner = photos[i] ? photoSlot(pid, i, -24, 8, 48, 46, photos[i]) : `<rect class="ns" x="-24" y="8" width="48" height="46" fill="${col}"/>${icon}`;
+  return `<g transform="translate(${x} ${y - 2}) rotate(${rot})"><rect x="-30" y="2" width="60" height="72" rx="3" fill="#fff"/>${inner}<rect class="thin" x="-4" y="-8" width="8" height="18" rx="2" fill="${C.wood}"/></g>`;
 }).join('');
 
+// Saat: akrep, yelkovan ve saniye ibresi. Sayfa her saniye ibreleri döndürür (clockAngles).
+export const clockAngles = d => {
+  const s = d.getSeconds(), m = d.getMinutes() + s / 60, h = (d.getHours() % 12) + m / 60;
+  return { h: r1(h * 30), m: r1(m * 6), s: s * 6 };
+};
 function clockArt({ now = new Date() } = {}) {
-  const m = now.getMinutes(), h = now.getHours() % 12;
+  const a = clockAngles(now);
   const ticks = Array.from({ length: 12 }, (_, i) => {
     const a = i * Math.PI / 6, big = i % 3 === 0;
     return `<circle class="ns" cx="${r1(52 + Math.sin(a) * 31)}" cy="${r1(52 - Math.cos(a) * 31)}" r="${big ? 3 : 1.8}" fill="${big ? C.rose : C.ink}"/>`;
@@ -327,18 +353,21 @@ function clockArt({ now = new Date() } = {}) {
   return `
   <circle cx="52" cy="52" r="48" fill="${C.pink}"/>
   <circle cx="52" cy="52" r="38" fill="#fff"/>${ticks}
-  <path d="M52 52V32" fill="none" style="stroke-width:5" transform="rotate(${r1(h * 30 + m * .5)} 52 52)"/>
-  <path d="M52 52V24" fill="none" transform="rotate(${m * 6} 52 52)"/>
+  <path class="clock-h" d="M52 52V32" fill="none" style="stroke-width:5" transform="rotate(${a.h} 52 52)"/>
+  <path class="clock-m" d="M52 52V24" fill="none" transform="rotate(${a.m} 52 52)"/>
+  <path class="clock-s" d="M52 60V20" fill="none" style="stroke:${C.rose};stroke-width:1.8" transform="rotate(${a.s} 52 52)"/>
   <circle cx="52" cy="52" r="4" fill="${C.rose}"/>`;
 }
 
 /* ---------- Küçük süsler (her şeyin üstüne konabilir) ---------- */
 
-const deskLampArt = `
+const deskLampArt = ({ on = true } = {}) => `
   <ellipse cx="30" cy="88" rx="24" ry="7" fill="${C.mintD}"/>
   <path d="M30 86L22 52L46 30" fill="none" style="stroke-width:6"/>
   <circle cx="22" cy="52" r="5" fill="${C.mint}"/>
-  <path d="M38 18Q62 4 76 30L52 46Z" fill="${C.mint}"/>`;
+  ${on ? `<path class="ns" d="M76 30L52 46L58 50L80 36Z" fill="${LIT}"/>` : ''}
+  <path d="M38 18Q62 4 76 30L52 46Z" fill="${C.mint}"/>
+  <circle class="thin" cx="30" cy="86" r="3" fill="${on ? C.yellow : '#fff'}"/>`;
 
 const smallPlantArt = `
   <ellipse class="thin" cx="32" cy="32" rx="10" ry="17" fill="${C.green}"/>
@@ -437,8 +466,9 @@ const teddyArt = `
   <ellipse class="ns" cx="28" cy="46" rx="5" ry="3" fill="${C.blush}" opacity=".6"/>
   <ellipse class="ns" cx="64" cy="46" rx="5" ry="3" fill="${C.blush}" opacity=".6"/>`;
 
-const mugArt = `
-  <path class="steam" d="M21 14Q16 9 21 4M31 14Q26 9 31 4" fill="none" style="stroke:#d9a7bc;stroke-width:2.5"/>
+// Kupa: dokununca buharı açılır/kapanır (içerken aç).
+const mugArt = ({ on = false } = {}) => `
+  ${on ? '<path class="steam" d="M21 14Q16 9 21 4M31 14Q26 9 31 4" fill="none" style="stroke:#d9a7bc;stroke-width:2.5"/>' : ''}
   <path d="M38 26A9 9 0 0 1 38 44" fill="none" style="stroke-width:7"/>
   <path d="M38 26A9 9 0 0 1 38 44" fill="none" style="stroke:#fff;stroke-width:2"/>
   <path d="M10 20H40V44A6 6 0 0 1 34 50H16A6 6 0 0 1 10 44Z" fill="#fff"/>
@@ -451,11 +481,112 @@ const booksArt = `
   <path d="M22 36H78" fill="none" class="thin" style="stroke:#fff"/>
   <rect x="6" y="12" width="76" height="16" rx="3" fill="${C.mint}" transform="rotate(-4 44 20)"/>`;
 
-const moonLampArt = `
+const moonLampArt = ({ on = true } = {}) => `
   <rect x="20" y="74" width="34" height="10" rx="4" fill="${C.wood}"/>
   <rect x="34" y="60" width="6" height="16" fill="${C.wood}"/>
-  <circle cx="37" cy="34" r="30" fill="#fff3c4"/>
-  <circle class="ns" cx="28" cy="26" r="6" fill="#f3e2a0"/><circle class="ns" cx="46" cy="42" r="8" fill="#f3e2a0"/><circle class="ns" cx="45" cy="19" r="3.5" fill="#f3e2a0"/>`;
+  <circle cx="37" cy="34" r="30" fill="${on ? '#fff3c4' : '#ece6d8'}"/>
+  <circle class="ns" cx="28" cy="26" r="6" fill="${on ? '#f3e2a0' : '#ddd6c6'}"/><circle class="ns" cx="46" cy="42" r="8" fill="${on ? '#f3e2a0' : '#ddd6c6'}"/><circle class="ns" cx="45" cy="19" r="3.5" fill="${on ? '#f3e2a0' : '#ddd6c6'}"/>`;
+
+// Çöp kutusu: silinen notlar buruşturulmuş kağıt topu olarak birikir, dolunca taşar.
+export const TRASH_CAP = 12;
+const trashArt = ({ trash = 0 } = {}) => {
+  const n = Math.min(trash, TRASH_CAP);
+  const full = trash >= TRASH_CAP;
+  // Kağıtlar ağızdan yükselerek birikir; son ikisi taşıp yere düşer.
+  const spots = [[26, 46], [44, 44], [62, 46], [78, 44], [35, 35], [53, 33], [71, 35], [44, 24], [62, 22], [53, 12], [6, 110], [98, 106]];
+  const cols = ['#fff3a6', '#ffd1e3', '#c9f0dd', '#cfe6ff', '#e4d6ff', '#ffd9b8'];
+  const balls = spots.slice(0, n).map(([x, y], i) => `<circle class="thin" cx="${x}" cy="${y}" r="${i % 3 ? 9 : 10}" fill="${cols[i % 6]}"/><path d="M${x - 4} ${y - 2}l4 3l3 -4" fill="none" class="thin" style="opacity:.5"/>`).join('');
+  return `
+  ${balls}
+  <path d="M16 50H88L80 118H24Z" fill="${C.lilac}"/>
+  <path d="M36 62L38 108M52 62V108M68 62L66 108" fill="none" class="thin" style="opacity:.45"/>
+  <rect x="10" y="44" width="84" height="12" rx="6" fill="${C.lilacD}"/>
+  <path class="ns" d="${heart(52, 76, 18)}" fill="#fff" opacity=".75"/>
+  ${full ? `<g class="trash-full"><circle cx="92" cy="12" r="11" fill="${C.rose}"/><text x="92" y="19" text-anchor="middle" font-size="18" font-weight="800" fill="#fff" font-family="Nunito, sans-serif">!</text></g>` : ''}`;
+};
+
+/* ---------- Avatar köşesi (Güzin'e özel) ---------- */
+
+const FUR = '#fbf5ea', FUR_D = '#efe3cf', BROWN = '#a0704e', BROWN_D = '#6b4a3a';
+
+// Appa: uçan gök bizonu. Odada kendi kendine süzülür (app.js), kuyruğu kanat gibi çırpar.
+const appaArt = () => {
+  const leg = (x, fill) => `<rect x="${x}" y="114" width="20" height="34" rx="9" fill="${fill}"/><ellipse class="thin" cx="${x + 10}" cy="147" rx="9" ry="4" fill="${BROWN}"/>`;
+  return `
+  <g class="appa-bob">
+  <g class="appa-tail"><path d="M60 80C32 70 6 80 4 98C2 116 28 126 60 108Z" fill="${FUR}"/><path d="M16 92C11 100 13 108 21 112" fill="none" class="thin" style="opacity:.4"/></g>
+  ${leg(100, FUR_D)}${leg(160, FUR_D)}${leg(216, FUR_D)}
+  <path d="M50 84C46 44 96 26 160 26C222 24 262 44 266 82C270 118 236 134 164 134C96 136 54 122 50 84Z" fill="${FUR}"/>
+  <path d="M74 50q8-8 16 0q8-8 16 0M216 44q7-7 14 0q7-7 14 0" fill="none" class="thin" style="opacity:.35"/>
+  <path d="M80 118C130 130 200 130 246 114" fill="none" class="thin" style="opacity:.3"/>
+  <path d="M118 32C120 14 196 14 200 32L204 48H114Z" fill="#d9776b"/>
+  <path d="M136 22H182" fill="none" class="thin" style="stroke:#f2cf9f;stroke-width:3"/>
+  <rect x="106" y="42" width="106" height="11" rx="5.5" fill="#f2cf9f"/>
+  ${leg(78, FUR)}${leg(136, FUR)}${leg(194, FUR)}
+  <path d="M262 40C258 24 246 18 236 22C246 26 251 32 253 42Z" fill="${BROWN}"/>
+  <path d="M232 78C226 44 252 30 278 34C304 38 318 60 314 86C310 108 290 118 268 116C246 114 236 100 232 78Z" fill="${FUR}"/>
+  <path d="M284 36C286 22 298 14 306 18C298 22 294 28 292 38Z" fill="${BROWN}"/>
+  <path d="M236 60L274 44L306 56L296 63L274 54L248 66Z" fill="${BROWN}"/>
+  <ellipse class="ns" cx="288" cy="72" rx="3.4" ry="4" fill="${BROWN_D}"/><circle class="ns" cx="289.2" cy="70.6" r="1.1" fill="#fff"/>
+  <ellipse class="ns" cx="275" cy="90" rx="8" ry="5" fill="${C.blush}" opacity=".5"/>
+  <ellipse cx="305" cy="90" rx="8" ry="6.5" fill="${BROWN_D}"/>
+  <path d="M284 102Q295 110 306 101" fill="none" class="thin"/>
+  </g>`;
+};
+
+const momoArt = () => `
+  <path d="M60 88C86 88 88 58 72 52" fill="none" style="stroke-width:10"/>
+  <path d="M60 88C86 88 88 58 72 52" fill="none" style="stroke:#cfc8d3;stroke-width:5"/>
+  <path d="M60 88C86 88 88 58 72 52" fill="none" style="stroke:#9d93a3;stroke-width:5;stroke-dasharray:3 6"/>
+  <g class="momo-ears">
+    <path d="M32 34C10 28 0 8 6 2C20 4 32 16 38 28Z" fill="#cfc8d3"/>
+    <path d="M54 34C76 28 86 8 80 2C66 4 54 16 48 28Z" fill="#cfc8d3"/>
+    <path class="ns" d="M30 28C18 24 12 14 13 9C21 11 29 18 33 25Z" fill="${C.blush}" opacity=".6"/>
+    <path class="ns" d="M56 28C68 24 74 14 73 9C65 11 57 18 53 25Z" fill="${C.blush}" opacity=".6"/>
+  </g>
+  <ellipse cx="43" cy="72" rx="21" ry="21" fill="#cfc8d3"/>
+  <ellipse class="ns" cx="43" cy="76" rx="13" ry="15" fill="#f4f0f6"/>
+  <circle cx="43" cy="40" r="19" fill="#cfc8d3"/>
+  <ellipse class="ns" cx="43" cy="45" rx="13" ry="11" fill="#f4f0f6"/>
+  <circle class="thin" cx="35" cy="40" r="6.5" fill="#9edc75"/><circle class="thin" cx="51" cy="40" r="6.5" fill="#9edc75"/>
+  <circle class="ns" cx="35" cy="40.5" r="3.4" fill="${C.ink}"/><circle class="ns" cx="51" cy="40.5" r="3.4" fill="${C.ink}"/>
+  <circle class="ns" cx="36.4" cy="38.6" r="1.3" fill="#fff"/><circle class="ns" cx="52.4" cy="38.6" r="1.3" fill="#fff"/>
+  <path class="ns" d="M41 48H45L43 50Z" fill="${C.ink}"/>
+  <path d="M43 50Q40 53 38 51M43 50Q46 53 48 51" fill="none" class="thin"/>
+  <ellipse class="thin" cx="33" cy="91" rx="8" ry="5" fill="#cfc8d3"/><ellipse class="thin" cx="53" cy="91" rx="8" ry="5" fill="#cfc8d3"/>`;
+
+const elementsArt = `
+  <rect x="6" y="8" width="138" height="168" rx="6" fill="#fff8ec"/>
+  <circle cx="45" cy="56" r="25" fill="#ffe7b8"/>
+  <path d="M45 56m-14 0a14 14 0 1 1 14 14a9 9 0 1 1 -9 -9a4 4 0 1 1 4 4" fill="none" style="stroke:#e09a3e;stroke-width:3.5"/>
+  <circle cx="105" cy="56" r="25" fill="#d4ecff"/>
+  <path d="M86 52q5-6 10 0t10 0t10 0M86 62q5-6 10 0t10 0t10 0" fill="none" style="stroke:#4f8fd6;stroke-width:3.5"/>
+  <circle cx="45" cy="124" r="25" fill="#d6f2bf"/>
+  <path d="M28 136L40 112L47 122L53 114L63 136Z" fill="#8fc27d"/>
+  <circle cx="105" cy="124" r="25" fill="#ffd6cc"/>
+  <path d="M105 104C116 118 118 126 114 134C110 141 100 141 96 134C92 126 98 120 101 114C103 120 106 122 108 120C110 116 108 110 105 104Z" fill="#f0705a"/>
+  <path class="ns" d="${heart(75, 154, 14)}" fill="${C.rose}"/>
+  <rect class="ns" x="58" y="0" width="34" height="14" rx="2" fill="#fff4b8" opacity=".9" transform="rotate(4 75 7)"/>`;
+
+const gliderArt = `
+  <path d="M40 34L64 64L58 150L40 172Z" fill="#f4a65c"/>
+  <path d="M40 34L16 64L22 150L40 172Z" fill="#e8834a"/>
+  <path d="M40 60L28 74M40 92L24 104M40 124L26 134" fill="none" class="thin" style="opacity:.4"/>
+  <rect x="35" y="16" width="10" height="240" rx="5" fill="${C.wood}"/>
+  <circle cx="40" cy="16" r="8" fill="${C.woodD}"/>
+  <path d="M40 214m-8 0a8 8 0 1 1 8 8a5 5 0 1 1 -5 -5" fill="none" style="stroke:#7fb7e6;stroke-width:3"/>`;
+
+const teapotArt = ({ on = false } = {}) => `
+  ${on ? '<path class="steam" d="M40 14Q35 9 40 4M50 14Q45 9 50 4" fill="none" style="stroke:#a9cbbd;stroke-width:2.5"/>' : ''}
+  <path d="M68 32C86 30 88 56 70 58" fill="none" style="stroke-width:7"/>
+  <path d="M68 32C86 30 88 56 70 58" fill="none" style="stroke:#a8d8c0;stroke-width:2.5"/>
+  <path d="M24 44C12 40 6 28 10 24C16 30 22 34 30 36Z" fill="#a8d8c0"/>
+  <ellipse cx="46" cy="48" rx="27" ry="22" fill="#bfe8d6"/>
+  <path d="M30 30C34 20 58 20 62 30Z" fill="#a8d8c0"/>
+  <circle cx="46" cy="18" r="4" fill="#a8d8c0"/>
+  ${[0, 72, 144, 216, 288].map(a => `<ellipse class="ns" cx="${r1(46 + Math.sin(a * Math.PI / 180) * 6)}" cy="${r1(50 - Math.cos(a * Math.PI / 180) * 6)}" rx="3.2" ry="5.5" fill="#fff" transform="rotate(${a} ${r1(46 + Math.sin(a * Math.PI / 180) * 6)} ${r1(50 - Math.cos(a * Math.PI / 180) * 6)})"/>`).join('')}
+  <circle class="ns" cx="46" cy="50" r="3" fill="${C.yellow}"/>
+  <ellipse class="ns" cx="46" cy="70" rx="18" ry="3" fill="#000" opacity=".06"/>`;
 
 /* ---------- Deniz'in hediyeleri (dükkanda yok) ---------- */
 
@@ -477,7 +608,10 @@ const balloonArt = `
   </g>`;
 
 const neonText = (x, t) => `<text x="${x}" y="80" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="64" fill="#ffe4f1" style="stroke:#ff4f9a;stroke-width:3;paint-order:stroke">${t}</text>`;
-const neonArt = `<g filter="url(#neon)">${neonText(52, 'G')}<path d="${heart(115, 26, 58)}" fill="#ffe4f1" style="stroke:#ff4f9a;stroke-width:3"/>${neonText(178, 'D')}</g>`;
+const neonOff = (x, t) => `<text x="${x}" y="80" text-anchor="middle" font-family="Nunito, sans-serif" font-weight="800" font-size="64" fill="#f6e6ee" style="stroke:#d9a7bc;stroke-width:3;paint-order:stroke">${t}</text>`;
+const neonArt = ({ on = true } = {}) => on
+  ? `<g filter="url(#neon)">${neonText(52, 'G')}<path d="${heart(115, 26, 58)}" fill="#ffe4f1" style="stroke:#ff4f9a;stroke-width:3"/>${neonText(178, 'D')}</g>`
+  : `<g>${neonOff(52, 'G')}<path d="${heart(115, 26, 58)}" fill="#f6e6ee" style="stroke:#d9a7bc;stroke-width:3"/>${neonOff(178, 'D')}</g>`;
 
 const envelopeArt = `
   <rect x="2" y="2" width="84" height="56" rx="8" fill="#fff"/>
@@ -494,37 +628,44 @@ export const ITEMS = {
   fridge:     { name: 'Buzdolabı', layer: 'floor', w: 150, h: 300, fixed: true, art: fridgeArt },
   door:       { name: 'Kapı', layer: 'floor', w: 170, h: 382, fixed: true, noFlip: true, art: doorArt },
 
-  mug:        { name: 'Kupa', layer: 'deco', w: 56, h: 54, price: 2, art: mugArt },
-  books:      { name: 'Kitap yığını', layer: 'deco', w: 96, h: 64, price: 3, art: booksArt },
+  mug:        { name: 'Kupa', layer: 'deco', w: 56, h: 54, price: 2, art: mugArt, toggle: false },
+  books:      { name: 'Kitap yığını', layer: 'deco', w: 96, h: 64, price: 3, art: booksArt, folder: true },
   smallPlant: { name: 'Küçük saksı', layer: 'deco', w: 64, h: 80, price: 3, art: smallPlantArt },
   poster:     { name: 'Lale posteri', layer: 'wall', w: 124, h: 160, price: 4, art: posterArt },
   garland:    { name: 'Flama', layer: 'wall', w: 380, h: 84, price: 4, art: garlandArt },
-  deskLamp:   { name: 'Masa lambası', layer: 'deco', w: 80, h: 96, price: 5, art: deskLampArt, glow: [{ cx: 64, cy: 42, r: 80 }] },
-  clock:      { name: 'Duvar saati', layer: 'wall', w: 104, h: 104, price: 5, art: clockArt },
+  deskLamp:   { name: 'Masa lambası', layer: 'deco', w: 80, h: 96, price: 5, art: deskLampArt, toggle: true, glow: [{ cx: 64, cy: 42, r: 80 }] },
+  clock:      { name: 'Duvar saati', layer: 'wall', w: 104, h: 104, price: 5, art: clockArt, noFlip: true },
+  trash:      { name: 'Çöp kutusu', layer: 'floor', w: 104, h: 122, price: 6, art: trashArt },
   pouf:       { name: 'Puf', layer: 'floor', w: 116, h: 80, price: 5, art: poufArt },
   rugRound:   { name: 'Yuvarlak halı', layer: 'rug', w: 320, h: 76, price: 6, art: rugRoundArt },
   chair:      { name: 'Sandalye', layer: 'floor', w: 110, h: 168, price: 6, art: chairArt },
-  shelf:      { name: 'Duvar rafı', layer: 'wall', w: 210, h: 86, price: 6, art: shelfArt, glow: [{ cx: 99, cy: 16, r: 46 }] },
-  moonLamp:   { name: 'Ay lambası', layer: 'deco', w: 74, h: 86, price: 6, art: moonLampArt, glow: [{ cx: 37, cy: 34, r: 110 }] },
+  shelf:      { name: 'Duvar rafı', layer: 'wall', w: 210, h: 86, price: 6, art: shelfArt, toggle: true, folder: true, glow: [{ cx: 99, cy: 16, r: 46 }] },
+  moonLamp:   { name: 'Ay lambası', layer: 'deco', w: 74, h: 86, price: 6, art: moonLampArt, toggle: true, glow: [{ cx: 37, cy: 34, r: 110 }] },
   rugStripe:  { name: 'Çizgili halı', layer: 'rug', w: 300, h: 64, price: 7, art: rugStripeArt },
-  painting:   { name: 'Tablo', layer: 'wall', w: 160, h: 124, price: 7, art: paintingArt },
+  painting:   { name: 'Tablo', layer: 'wall', w: 160, h: 124, price: 7, art: paintingArt, photos: 1 },
   monstera:   { name: 'Monstera', layer: 'floor', w: 140, h: 216, price: 8, art: monsteraArt },
   nightstand: { name: 'Komodin', layer: 'floor', w: 116, h: 124, price: 8, art: nightstandArt },
-  fairy:      { name: 'Işık zinciri', layer: 'wall', w: 420, h: 70, price: 8, art: fairyArt, glow: FAIRY_PTS.map(([x, y]) => ({ cx: x, cy: y + 13, r: 34 })) },
+  fairy:      { name: 'Işık zinciri', layer: 'wall', w: 420, h: 70, price: 8, art: fairyArt, toggle: true, glow: FAIRY_PTS.map(([x, y]) => ({ cx: x, cy: y + 13, r: 34 })) },
   rugHeart:   { name: 'Kalp halı', layer: 'rug', w: 250, h: 88, price: 9, art: rugHeartArt },
   mirror:     { name: 'Ayna', layer: 'wall', w: 112, h: 176, price: 9, art: mirrorArt },
-  floorLamp:  { name: 'Lambader', layer: 'floor', w: 90, h: 290, price: 9, art: floorLampArt, glow: [{ cx: 45, cy: 78, r: 140 }] },
-  polaroids:  { name: 'Fotoğraf ipi', layer: 'wall', w: 380, h: 110, price: 10, art: polaroidArt },
+  floorLamp:  { name: 'Lambader', layer: 'floor', w: 90, h: 290, price: 9, art: floorLampArt, toggle: true, glow: [{ cx: 45, cy: 78, r: 140 }] },
+  polaroids:  { name: 'Fotoğraf ipi', layer: 'wall', w: 380, h: 110, price: 10, art: polaroidArt, photos: 4 },
   teddy:      { name: 'Ayıcık', layer: 'deco', w: 92, h: 104, price: 10, art: teddyArt },
   desk:       { name: 'Çalışma masası', layer: 'floor', w: 260, h: 166, price: 15, art: deskArt },
-  bookshelf:  { name: 'Kitaplık', layer: 'floor', w: 170, h: 300, price: 16, art: bookshelfArt },
+  bookshelf:  { name: 'Kitaplık', layer: 'floor', w: 170, h: 300, price: 16, art: bookshelfArt, folder: true },
   armchair:   { name: 'Koltuk', layer: 'floor', w: 220, h: 170, price: 18, art: armchairArt },
   cat:        { name: 'Kedi', layer: 'deco', w: 132, h: 100, price: 20, art: catArt },
   bed:        { name: 'Yatak', layer: 'floor', w: 360, h: 200, price: 25, art: bedArt },
 
+  teapot:     { name: "Iroh'un çaydanlığı", layer: 'deco', w: 90, h: 74, price: 6, art: teapotArt, toggle: false, tag: 'Avatar' },
+  elements:   { name: 'Dört element posteri', layer: 'wall', w: 150, h: 180, price: 9, art: elementsArt, tag: 'Avatar' },
+  glider:     { name: 'Hava göçebesi planörü', layer: 'wall', w: 80, h: 260, price: 14, art: gliderArt, tag: 'Avatar' },
+  momo:       { name: 'Momo', layer: 'deco', w: 88, h: 98, price: 22, art: momoArt, tag: 'Avatar' },
+  appa:       { name: 'Appa', layer: 'deco', w: 320, h: 156, price: 80, art: appaArt, tag: 'Avatar' },
+
   roses:      { name: 'Gül buketi', layer: 'deco', w: 84, h: 132, gift: true, art: rosesArt },
   balloon:    { name: 'Kalp balon', layer: 'deco', w: 84, h: 210, gift: true, art: balloonArt },
-  neon:       { name: 'Neon G ♡ D', layer: 'wall', w: 230, h: 110, gift: true, noFlip: true, art: neonArt, glow: [{ cx: 115, cy: 55, r: 160, c: 'glowPink' }] },
+  neon:       { name: 'Neon G ♡ D', layer: 'wall', w: 230, h: 110, gift: true, noFlip: true, art: neonArt, toggle: true, glow: [{ cx: 115, cy: 55, r: 160, c: 'glowPink' }] },
 };
 
 export const SHOP = Object.keys(ITEMS).filter(k => !ITEMS[k].fixed && !ITEMS[k].gift);
@@ -567,6 +708,9 @@ export function defsSVG() {
   ${pat('fl-carpet', 24, 24, `<rect width="24" height="24" fill="#f6c4d5"/><circle cx="6" cy="6" r="2" fill="#f0afc5"/><circle cx="18" cy="18" r="2" fill="#f0afc5"/>`)}
   ${pat('fl-checker', 80, 80, `<rect width="80" height="80" fill="#fff6f9"/><rect width="40" height="40" fill="#f9d3e1"/><rect x="40" y="40" width="40" height="40" fill="#f9d3e1"/>`)}`;
 }
+
+// Açılıp kapanan eşyalar (lamba, mum, kupa buharı): kayıtlı değer yoksa eşyanın varsayılanı.
+export const itemOn = (p, def) => (typeof p?.on === 'boolean' ? p.on : def?.toggle !== false);
 
 export const artOf = (def, ctx = {}) => (typeof def.art === 'function' ? def.art(ctx) : def.art);
 

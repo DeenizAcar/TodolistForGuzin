@@ -15,6 +15,14 @@ service cloud.firestore {
 
     match /rooms/{roomId} {
       allow read, write: if isMember();
+
+      // Tabloya / fotoğraf ipine konan fotoğraflar (her biri ayrı kayıt, en fazla ~900 KB).
+      match /photos/{photoId} {
+        allow read, delete: if isMember();
+        allow create, update: if isMember()
+          && request.resource.data.data is string
+          && request.resource.data.data.size() < 900000;
+      }
     }
   }
 }

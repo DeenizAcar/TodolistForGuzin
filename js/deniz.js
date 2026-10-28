@@ -6,12 +6,13 @@ import { roomSVG } from './room.js';
 import { setupServiceWorker } from './sw-update.js';
 import {
   dayKey, uid, now, fridgeList, unlockInfo, isDone, esc, fmtDate, normalize, pad, dndActive, fmtDur,
-  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals,
+  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals, safeColor,
 } from './logic.js';
 
 const $ = s => document.querySelector(s);
 let store = null;
 let S = null;
+let photoData = {};
 let user = null;
 // Silme işlemleri iki adımlı: ilk basışta "emin misin?", 3 sn içinde ikinci basışta silinir.
 let armed = null;
@@ -30,7 +31,7 @@ async function init() {
     return;
   }
   if (store.mode === 'local') $('#localNote').hidden = false;
-  store.start({ seed: defaultState, onUser, onState, onError });
+  store.start({ seed: defaultState, onUser, onState, onError, onPhotos: all => { photoData = all || {}; if (S) render(); } });
   setInterval(() => S && render(), 30000);
   // Sayaç çalışırken kalan süre saniye saniye güncellensin.
   setInterval(() => { if (S && timerState(S.timer) === 'run') renderStudy(); }, 1000);
@@ -70,7 +71,7 @@ function render() {
   const d = now();
   const { open } = fridgeList(S, dayKey(d));
   const unread = Object.values(S.notes).filter(n => (n.showAt || 0) <= Date.now() && !n.readAt).length;
-  $('#room').innerHTML = roomSVG(S, { now: d, postits: open.map(t => t.color), unread, dnd: dndActive(S) });
+  $('#room').innerHTML = roomSVG(S, { now: d, postits: open.map(t => safeColor(t.color)), unread, dnd: dndActive(S), photoData });
   renderNotes();
   renderTodos();
   renderManage();
@@ -200,7 +201,11 @@ function remove(key) {
   if (kind === 'inv') return act([[`inventory.${id}`, DEL]]);
   if (kind === 'wall') return act([[`ownWall.${id}`, DEL], ...(S.wall === id ? [['wall', 'dots']] : [])]);
   if (kind === 'floor') return act([[`ownFloor.${id}`, DEL], ...(S.floor === id ? [['floor', 'wood']] : [])]);
-  if (kind === 'reset') { store.replace(defaultState()); toast('Oda ilk günkü haline döndü ♡'); }
+  if (kind === 'reset') {
+    store.replace(defaultState());
+    Object.keys(photoData).forEach(id => store.delPhoto(id));
+    toast('Oda ilk günkü haline döndü ♡');
+  }
 }
 
 function itemOptions() {
