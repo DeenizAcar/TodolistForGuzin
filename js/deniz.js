@@ -242,11 +242,12 @@ function setup() {
       if (!t) { $('#nMsg').textContent = 'Tarih seçmeyi unutma.'; return; }
       showAt = t;
     }
-    const hearts = Number($('#nHearts').value) || 0;
+    // İstediğin kadar kalp yazılabilir (tam sayı, 0–9999).
+    const hearts = Math.max(0, Math.min(9999, Math.floor(Number($('#nHearts').value) || 0)));
     const item = $('#nItem').value || null;
     act([[`notes.${uid()}`, { text, createdAt: Date.now(), showAt, gift: hearts || item ? { hearts, item } : null }]]);
     $('#nText').value = '';
-    $('#nHearts').value = '0';
+    $('#nHearts').value = '';
     $('#nItem').value = '';
     $('#nMsg').textContent = '';
     toast(showAt > Date.now() + 60000 ? `Mektup ${fmtDate(showAt)} tarihinde kapının önünde olacak ♡` : 'Mektup kapının önünde ♡');
