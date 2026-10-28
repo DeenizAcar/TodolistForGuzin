@@ -2,7 +2,7 @@
 // Kendi dosyalarımız: her istekte sunucuya "değişti mi?" diye sorulur (no-cache),
 // böylece yeni sürüm yayınlanınca sayfa ile kod asla karışmaz. İnternet yoksa önbellekten.
 // Firebase ve fontlar: sürümlü adresler, değişmezler; önce önbellek.
-const CACHE = 'oda-v4';
+const CACHE = 'oda-v5';
 const ASSETS = [
   './', './index.html', './deniz.html', './manifest.webmanifest',
   './css/style.css', './css/deniz.css',

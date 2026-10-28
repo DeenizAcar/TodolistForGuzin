@@ -69,8 +69,18 @@
   </div>
   <form class="add-form" id="addForm" autocomplete="off">
     <input id="addText" maxlength="90" placeholder="Bugün ne yapacaksın?" enterkeyhint="done">
+    <div class="cdots" id="cdots" role="radiogroup" aria-label="Post-it rengi"></div>
+    <div class="wheel-box" id="wheelBox" hidden>
+      <div class="wheel" id="wheel" role="slider" aria-label="Renk çarkı: ton ve canlılık" tabindex="0"><i class="wheel-dot" id="wheelDot"></i></div>
+      <div class="wheel-side">
+        <div class="wheel-prev" id="wheelPrev">Not ♡</div>
+        <label class="wheel-l">Açıklık
+          <input type="range" id="wheelL" min="35" max="96" value="86">
+        </label>
+        <code class="wheel-hex" id="wheelHex"></code>
+      </div>
+    </div>
     <div class="add-row">
-      <div class="cdots" id="cdots"></div>
       <label class="rep"><input type="checkbox" id="addRep"> ↻ Her gün</label>
       <button class="b p" type="submit">Yapıştır</button>
     </div>

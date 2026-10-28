@@ -15,7 +15,37 @@ export const now = () => {
   return d;
 };
 
-export const POSTIT_COLORS = ['#fff3a6', '#ffd1e3', '#c9f0dd', '#cfe6ff', '#e4d6ff', '#ffd9b8'];
+// 18 pastel post-it rengi, tonlarına göre sıralı (ilk 6'sı eski renkler, eski notlar aynı kalır).
+export const POSTIT_PALETTE = [
+  ['#fff3a6', 'Sarı'], ['#eef5b5', 'Limon'], ['#d6f2bf', 'Fıstık'], ['#c9f0dd', 'Mint'],
+  ['#bdeff0', 'Su yeşili'], ['#cfe6ff', 'Mavi'], ['#c7d5ff', 'Çivit'], ['#d9ccff', 'Lavanta'],
+  ['#e4d6ff', 'Lila'], ['#f3cdf2', 'Orkide'], ['#ffd1e3', 'Pembe'], ['#ffc4d4', 'Çilek'],
+  ['#ffc9c2', 'Mercan'], ['#ffd9b8', 'Şeftali'], ['#ffe2a8', 'Kayısı'], ['#fff0d4', 'Vanilya'],
+  ['#efdccb', 'Latte'], ['#ebe5ef', 'Sis'],
+];
+export const POSTIT_COLORS = POSTIT_PALETTE.map(([c]) => c);
+
+// Renk çarkı için: HSL'den #rrggbb.
+export function hslToHex(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return '#' + [f(0), f(8), f(4)].map(x => Math.round(x * 255).toString(16).padStart(2, '0')).join('');
+}
+
+// Koyu post-it'te yazı beyaz olsun, açıkta koyu.
+export function inkFor(hex) {
+  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex || ''));
+  if (!m) return '#4a2636';
+  const lin = v => { v /= 255; return v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; };
+  const n = parseInt(m[1], 16);
+  const L = .2126 * lin(n >> 16) + .7152 * lin((n >> 8) & 255) + .0722 * lin(n & 255);
+  return L < .3 ? '#ffffff' : '#4a2636';
+}
+
+// Sadece #rrggbb kabul et (veritabanından gelen rengi stile koymadan önce).
+export const safeColor = c => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : POSTIT_COLORS[0]);
 
 export const isDone = (t, day) => (t.repeat ? t.doneDay === day : !!t.done);
 

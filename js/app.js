@@ -5,7 +5,7 @@ import { ITEMS, WALLS, FLOORS, SHOP, ENVELOPE, STAGE, defaultState, clampPos, sp
 import { roomSVG } from './room.js';
 import { setupServiceWorker } from './sw-update.js';
 import {
-  dayKey, uid, now, POSTIT_COLORS, fridgeList, unlockInfo, visibleNotes, unreadNotes,
+  dayKey, uid, now, POSTIT_COLORS, POSTIT_PALETTE, hslToHex, inkFor, safeColor, fridgeList, unlockInfo, visibleNotes, unreadNotes,
   esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, skyPhase,
   timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals, BONUS, BONUS_MIN,
 } from './logic.js';
@@ -28,6 +28,12 @@ const act = ops => store.apply(ops);
 
 // Sayaç ön ayarları: [dakika, tür]. "Mola" başlatınca kapıya tabela asılmaz.
 const PRESETS = [[25, 'Odak'], [50, 'Odak'], [10, 'Mola'], [5, 'Mola']];
+
+// Renk çarkında son seçilen renk (ton, canlılık, açıklık) bu cihazda hatırlanır.
+const wheel = (() => {
+  try { const w = JSON.parse(localStorage.getItem('oda_cark')); if (w && w.h >= 0) return w; } catch (e) {}
+  return { h: 330, s: 65, l: 86 };
+})();
 
 init();
 
@@ -142,7 +148,7 @@ function renderRoom() {
   syncCats();
   svg.innerHTML = roomSVG(S, {
     now: d, design: ui.design, selected: ui.design ? ui.sel : null,
-    postits: open.map(t => t.color), unread: unreadNotes(S).length,
+    postits: open.map(t => safeColor(t.color)), unread: unreadNotes(S).length,
     dnd: dndActive(S), swing: Date.now() < ui.swingUntil, overrides: catOverrides(),
   });
   placeSelBar();
@@ -181,7 +187,7 @@ function renderToday() {
   const total = u.open.length + u.doneToday.length;
   const done = u.doneToday.length;
   const unread = unreadNotes(S).length;
-  const minis = u.open.slice(0, 4).map(t => `<span class="mini" style="--c:${esc(t.color || POSTIT_COLORS[0])};--r:${tilt(t.id)}deg">${esc(t.text)}</span>`).join('')
+  const minis = u.open.slice(0, 4).map(t => { const c = safeColor(t.color); return `<span class="mini" style="--c:${c};--tc:${inkFor(c)};--r:${tilt(t.id)}deg">${esc(t.text)}</span>`; }).join('')
     + (u.open.length > 4 ? `<span class="mini more">+${u.open.length - 4} not</span>` : '');
   $('#today').innerHTML = `
     <div class="tl"><span>Bugün ♡ ${total ? `${done}/${total} not bitti` : 'buzdolabına not ekle'}</span><span class="mut small">her not +1 ♡</span></div>
@@ -237,7 +243,7 @@ function renderFridge() {
     : 'Biten her not +1 ♡';
   $('#postits').innerHTML = open.length
     ? open.map(t => `
-      <div class="postit" role="button" tabindex="0" style="--c:${esc(t.color || POSTIT_COLORS[0])};--r:${tilt(t.id)}deg" data-tid="${t.id}">${esc(t.text)}${t.repeat ? '<i class="rep-i">↻ her gün</i>' : ''}${t.from === 'deniz' ? '<span class="from" title="Deniz yapıştırdı">D♡</span>' : ''}<button class="pt-del ${ui.delArm === t.id ? 'arm' : ''}" data-del="${t.id}" aria-label="Notu sil">${ui.delArm === t.id ? 'sil?' : '×'}</button></div>`).join('')
+      <div class="postit" role="button" tabindex="0" style="--c:${safeColor(t.color)};--tc:${inkFor(safeColor(t.color))};--r:${tilt(t.id)}deg" data-tid="${t.id}">${esc(t.text)}${t.repeat ? '<i class="rep-i">↻ her gün</i>' : ''}${t.from === 'deniz' ? '<span class="from" title="Deniz yapıştırdı">D♡</span>' : ''}<button class="pt-del ${ui.delArm === t.id ? 'arm' : ''}" data-del="${t.id}" aria-label="Notu sil">${ui.delArm === t.id ? 'sil?' : '×'}</button></div>`).join('')
     : `<div class="fr-empty">${total ? 'Hepsi bitti! Aferin sana ♡' : 'Buzdolabı bomboş ♡<br>Bugün yapacaklarını aşağıya yaz'}</div>`;
   $('#doneList').innerHTML = doneToday.length
     ? '<h3>Bugün bitenler ♡</h3>' + doneToday.map(t => `<button class="done-it" data-undo="${t.id}"><s>${esc(t.text)}</s><span>geri al</span></button>`).join('')
@@ -988,14 +994,90 @@ function toggleTheme() {
 
 /* ---------- Sabit olay bağlantıları ---------- */
 
-function setupStatic() {
-  $('#cdots').innerHTML = POSTIT_COLORS.map((c, i) => `<button type="button" class="cdot ${i === 0 ? 'on' : ''}" data-color="${c}" style="background:${c}" aria-label="Renk ${i + 1}"></button>`).join('');
-  $('#cdots').addEventListener('click', e => {
-    const b = e.target.closest('[data-color]');
-    if (!b) return;
+/* ---------- Post-it renkleri ve renk çarkı ---------- */
+
+function setupColors() {
+  $('#cdots').innerHTML = POSTIT_PALETTE.map(([c, name], i) =>
+    `<button type="button" class="cdot${i === 0 ? ' on' : ''}" role="radio" aria-checked="${i === 0}" data-color="${c}" style="background:${c}" title="${name}" aria-label="${name}"></button>`).join('')
+    + '<button type="button" class="cdot wheel-btn" id="wheelBtn" role="radio" aria-checked="false" title="Renk çarkı" aria-label="Renk çarkından kendi rengini seç"><span>🎨</span></button>';
+
+  const pickPreset = b => {
     ui.color = b.dataset.color;
-    document.querySelectorAll('.cdot').forEach(x => x.classList.toggle('on', x === b));
+    $('#wheelBox').hidden = true;
+    markColor(b);
+  };
+  $('#cdots').addEventListener('click', e => {
+    const b = e.target.closest('.cdot');
+    if (!b) return;
+    if (b.id === 'wheelBtn') {
+      const open = $('#wheelBox').hidden;
+      $('#wheelBox').hidden = !open;
+      if (open) { useWheelColor(); renderWheel(); }
+      return;
+    }
+    pickPreset(b);
   });
+
+  const el = $('#wheel');
+  const pick = e => {
+    const r = el.getBoundingClientRect();
+    const dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    // 0° tepede, saat yönünde; merkezden uzaklık = canlılık.
+    wheel.h = Math.round((Math.atan2(dx, -dy) * 180 / Math.PI + 360) % 360);
+    wheel.s = Math.round(Math.min(1, Math.hypot(dx, dy) / (r.width / 2)) * 100);
+    useWheelColor();
+    renderWheel();
+  };
+  el.addEventListener('pointerdown', e => { el.setPointerCapture(e.pointerId); pick(e); e.preventDefault(); });
+  el.addEventListener('pointermove', e => { if (el.hasPointerCapture(e.pointerId)) pick(e); });
+  el.addEventListener('keydown', e => {
+    const step = { ArrowLeft: [-10, 0], ArrowRight: [10, 0], ArrowUp: [0, 8], ArrowDown: [0, -8] }[e.key];
+    if (!step) return;
+    e.preventDefault();
+    wheel.h = (wheel.h + step[0] + 360) % 360;
+    wheel.s = Math.max(0, Math.min(100, wheel.s + step[1]));
+    useWheelColor();
+    renderWheel();
+  });
+  $('#wheelL').addEventListener('input', e => { wheel.l = Number(e.target.value); useWheelColor(); renderWheel(); });
+}
+
+function markColor(btn) {
+  document.querySelectorAll('#cdots .cdot').forEach(x => {
+    x.classList.toggle('on', x === btn);
+    x.setAttribute('aria-checked', x === btn ? 'true' : 'false');
+  });
+}
+
+function useWheelColor() {
+  ui.color = hslToHex(wheel.h, wheel.s, wheel.l);
+  const b = $('#wheelBtn');
+  b.style.background = ui.color;
+  b.classList.add('custom');
+  markColor(b);
+  try { localStorage.setItem('oda_cark', JSON.stringify(wheel)); } catch (e) {}
+}
+
+function renderWheel() {
+  const L = wheel.l;
+  const hues = [0, 60, 120, 180, 240, 300, 360].map(h => `hsl(${h} 100% ${L}%)`).join(',');
+  $('#wheel').style.background = `radial-gradient(closest-side, hsl(0 0% ${L}%), hsl(0 0% ${L}% / 0)), conic-gradient(${hues})`;
+  const a = wheel.h * Math.PI / 180, r = wheel.s / 100 * 50;
+  const dot = $('#wheelDot');
+  dot.style.left = (50 + Math.sin(a) * r) + '%';
+  dot.style.top = (50 - Math.cos(a) * r) + '%';
+  dot.style.background = ui.color;
+  const prev = $('#wheelPrev');
+  prev.style.background = ui.color;
+  prev.style.color = inkFor(ui.color);
+  $('#wheelHex').textContent = ui.color;
+  $('#wheelL').value = L;
+  $('#wheelL').style.background = `linear-gradient(90deg, ${hslToHex(wheel.h, wheel.s, 35)}, ${hslToHex(wheel.h, wheel.s, 65)}, ${hslToHex(wheel.h, wheel.s, 96)})`;
+  $('#wheel').setAttribute('aria-valuetext', ui.color);
+}
+
+function setupStatic() {
+  setupColors();
   $('#addForm').addEventListener('submit', e => { e.preventDefault(); addTodo(); });
   $('#loginArt').innerHTML = thumbSVG('fridge', { postits: ['#fff3a6', '#ffd1e3', '#c9f0dd'] });
 
