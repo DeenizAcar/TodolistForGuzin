@@ -62,7 +62,8 @@ export function unlockInfo(S, d = now()) {
   const day = dayKey(d);
   const { open, doneToday } = fridgeList(S, day);
   const hour = S.settings?.eveningHour ?? 18;
-  const listOk = open.length === 0;
+  // Liste bugün bir kez bittiyse, sonradan (ör. yarın için) not eklense de bitmiş sayılır.
+  const listOk = open.length === 0 || !!S.listDone?.[day];
   const timeOk = d.getHours() >= hour;
   const gift = !!S.unlock?.[day];
   // Bugün bir kez açıldıysa sonradan not eklense de gün boyu açık kalır.
@@ -155,7 +156,7 @@ export function skyPhase(d = now()) {
 // Eski verilerde eksik alan kalmasın.
 export function normalize(st) {
   const S = st || {};
-  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog', 'trash', 'opened']) {
+  for (const k of ['placed', 'inventory', 'todos', 'notes', 'bonus', 'unlock', 'settings', 'stats', 'ownWall', 'ownFloor', 'studyLog', 'trash', 'opened', 'listDone']) {
     if (typeof S[k] !== 'object' || S[k] === null) S[k] = {};
   }
   if (typeof S.timer !== 'object' || S.timer === null) S.timer = {};

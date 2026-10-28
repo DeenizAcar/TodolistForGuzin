@@ -205,9 +205,13 @@ function renderToday() {
 function renderDock() {
   const u = unlockInfo(S, now());
   // Kilit bugün ilk kez açıldıysa kaydet; böylece yeni not eklenince tekrar kilitlenmez.
-  if (u.listOk && u.timeOk && !u.earned && !ui.openedSent) {
+  const ops = [];
+  if (u.listOk && u.timeOk && !u.earned) ops.push([`opened.${u.day}`, true]);
+  // Bugün en az bir not bitip liste boşaldıysa "liste bitti" diye kaydet (akşamdan önce de).
+  if (!u.open.length && u.doneToday.length && !S.listDone[u.day]) ops.push([`listDone.${u.day}`, true]);
+  if (ops.length && !ui.openedSent) {
     ui.openedSent = u.day;
-    setTimeout(() => { act([[`opened.${u.day}`, true]]); ui.openedSent = null; }, 0);
+    setTimeout(() => { act(ops); ui.openedSent = null; }, 0);
   }
   const c = $('#fridgeCnt');
   c.hidden = !u.open.length;
