@@ -130,7 +130,7 @@ function doorArt({ dnd = false, swing = false, light = false } = {}) {
   <rect x="18" y="18" width="134" height="360" rx="8" fill="#e9b98d"/>
   <rect x="34" y="40" width="102" height="118" rx="10" fill="#f2cf9f"/>
   <rect x="34" y="182" width="102" height="170" rx="10" fill="#f2cf9f"/>
-  <circle cx="134" cy="200" r="9" fill="${C.yellow}"/>
+  <circle cx="36" cy="200" r="9" fill="${C.yellow}"/>
   <g class="door-sign${swing ? ' swing' : ''}" data-act="sign">
     <rect class="ns" x="22" y="20" width="126" height="102" fill="transparent"/>
     ${sign}
