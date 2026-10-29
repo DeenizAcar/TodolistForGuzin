@@ -7,7 +7,7 @@ import { setupServiceWorker } from './sw-update.js';
 import {
   dayKey, uid, now, POSTIT_COLORS, POSTIT_PALETTE, hslToHex, inkFor, safeColor, fridgeList, unlockInfo, visibleNotes, unreadNotes,
   esc, fmtDate, tilt, normalize, hourAt, dndActive, fmtDur, skyPhase,
-  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals, BONUS, BONUS_MIN,
+  timerState, timerRemaining, mmss, hm, dayLabel, studySessions, studyTotals, BONUS, BONUS_MIN, DONE_GOAL,
 } from './logic.js';
 
 const $ = s => document.querySelector(s);
@@ -179,10 +179,11 @@ function placeRoomCtrls() {
 }
 
 function statusLine(u) {
-  if (u.unlocked) return u.gift && !(u.listOk && u.timeOk) ? '🎁 Deniz bugün dekorasyonu senin için açtı ♡' : '✨ Dekorasyon açık! Odanı süsleyebilirsin';
+  if (u.unlocked) return u.gift && !(u.taskOk && u.timeOk) ? '🎁 Deniz bugün dekorasyonu senin için açtı ♡' : '✨ Dekorasyon açık! Odanı süsleyebilirsin';
   if (u.listOk && !u.doneToday.length) return `🌙 Dekorasyon ${hourAt(u.hour)} açılıyor`;
   if (u.listOk) return `🌙 Liste bitti! Dekorasyon ${hourAt(u.hour)} açılıyor`;
-  if (u.timeOk) return `🔒 Dekorasyon için ${u.open.length} not kaldı`;
+  if (u.goal) return `🌙 Bugün ${u.doneToday.length} not bitirdin! Dekorasyon ${hourAt(u.hour)} açılıyor`;
+  if (u.timeOk) return `🔒 Dekorasyon için ${Math.min(u.open.length, DONE_GOAL - u.doneToday.length)} not daha bitir`;
   return `🔒 Dekorasyon: liste bitince ve saat ${u.hour}:00 olunca`;
 }
 
@@ -206,7 +207,7 @@ function renderDock() {
   const u = unlockInfo(S, now());
   // Kilit bugün ilk kez açıldıysa kaydet; böylece yeni not eklenince tekrar kilitlenmez.
   const ops = [];
-  if (u.listOk && u.timeOk && !u.earned) ops.push([`opened.${u.day}`, true]);
+  if (u.taskOk && u.timeOk && !u.earned) ops.push([`opened.${u.day}`, true]);
   // Bugün en az bir not bitip liste boşaldıysa "liste bitti" diye kaydet (akşamdan önce de).
   if (!u.open.length && u.doneToday.length && !S.listDone[u.day]) ops.push([`listDone.${u.day}`, true]);
   if (ops.length && !ui.openedSent) {
@@ -272,12 +273,12 @@ function renderInfo() {
     <div class="sheet-head"><h2>Dekorasyon ♡</h2><button class="x" data-close aria-label="Kapat">×</button></div>
     <p class="info-p">Şu an <b style="color:var(--acc)">${S.hearts} ♡</b> kalbin var. Biten her not <b>+1 ♡</b>, en az ${BONUS_MIN} notun hepsi bitince <b>+${BONUS} ♡</b> bonus.</p>
     <div class="checks">
-      <div class="ck ${u.listOk ? 'ok' : ''}"><b>${u.listOk ? '✓' : '○'}</b> Buzdolabındaki notların hepsi bitti ${total ? `(${u.doneToday.length}/${total})` : ''}</div>
+      <div class="ck ${u.taskOk ? 'ok' : ''}"><b>${u.taskOk ? '✓' : '○'}</b> Notların hepsi bitti ${total ? `(${u.doneToday.length}/${total})` : ''} <span class="mut">ya da</span> bugün ${DONE_GOAL} not bitti (${Math.min(u.doneToday.length, DONE_GOAL)}/${DONE_GOAL})</div>
       <div class="ck ${u.timeOk ? 'ok' : ''}"><b>${u.timeOk ? '✓' : '○'}</b> Akşam oldu (saat ${u.hour}:00)</div>
       ${u.gift ? '<div class="ck ok"><b>🎁</b> Deniz bugün kilidi senin için açtı</div>' : ''}
     </div>
-    <button class="b p big" data-go="design" ${u.unlocked ? '' : 'disabled'}>${u.unlocked ? 'Odamı süslemeye başla ✨' : u.listOk ? 'Akşamı bekliyoruz ♡' : 'Önce buzdolabındaki notlar ♡'}</button>
-    ${u.unlocked || u.listOk ? '' : '<button class="b big" data-go="fridge" style="margin-top:8px">🧊 Buzdolabına git</button>'}
+    <button class="b p big" data-go="design" ${u.unlocked ? '' : 'disabled'}>${u.unlocked ? 'Odamı süslemeye başla ✨' : u.taskOk ? 'Akşamı bekliyoruz ♡' : 'Önce buzdolabındaki notlar ♡'}</button>
+    ${u.unlocked || u.taskOk ? '' : '<button class="b big" data-go="fridge" style="margin-top:8px">🧊 Buzdolabına git</button>'}
     <h3>Dükkanda neler var?</h3>
     <div class="grid preview">${SHOP.map(id => shopCard(id, false)).join('')}</div>`;
 }
@@ -340,7 +341,7 @@ function renderMenu() {
     <ul class="rules">
       <li>Bugün yapacaklarını <b>buzdolabına</b> post-it olarak yapıştır. Bitince üstüne dokun, koparıp at.</li>
       <li>Biten her not <b>+1 ♡</b>. En az ${BONUS_MIN} notun hepsi bitince <b>+${BONUS} ♡</b> bonus.</li>
-      <li>Liste bitince ve saat <b>${h}:00</b> olunca <b>dekorasyon</b> açılır: kalplerinle eşya al, sürükleyip yerleştir.</li>
+      <li>Liste bitince <b>ya da</b> günde <b>${DONE_GOAL} not</b> bitirince, saat <b>${h}:00</b> olunca <b>dekorasyon</b> açılır: kalplerinle eşya al, sürükleyip yerleştir.</li>
       <li><b>↻ Her gün</b> işaretli notlar her sabah yeniden gelir.</li>
       <li>Ders çalışırken kapıdaki <b>Güzin</b> tabelasına dokun ya da <b>⏱ sayacı</b> başlat: <b>Do not disturb</b> asılır, Deniz de görür. Bitince tabelaya tekrar dokun; ne kadar çalıştığın sayacın altındaki geçmişe yazılır.</li>
       <li><b>Kediyi</b> tıklayarak ya da üstünde parmağını/fareni gezdirerek sev. Her gün ilk sevişte <b>+1 ♡</b>.</li>

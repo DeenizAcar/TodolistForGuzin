@@ -112,8 +112,8 @@ function renderStatus() {
   const total = u.open.length + u.doneToday.length;
   const placed = Object.values(S.placed).filter(p => ITEMS[p.item] && !ITEMS[p.item].fixed).length;
   const lockTxt = u.unlocked
-    ? (u.gift && !(u.listOk && u.timeOk) ? 'Bugün kilidi sen açtın 🎁' : 'Açık ✨ odasını süsleyebilir')
-    : u.listOk ? `Liste bitti, saat ${u.hour}:00 bekleniyor` : `${u.open.length} not kaldı`;
+    ? (u.gift && !(u.taskOk && u.timeOk) ? 'Bugün kilidi sen açtın 🎁' : 'Açık ✨ odasını süsleyebilir')
+    : u.taskOk ? `Görev tamam (${u.doneToday.length} not), saat ${u.hour}:00 bekleniyor` : `${Math.min(u.open.length, Math.max(0, 5 - u.doneToday.length))} not daha bitirmeli`;
   const dnd = dndActive(S);
   const dndMin = dnd ? Math.floor((Date.now() - S.dnd.since) / 60000) : 0;
   const door = dnd

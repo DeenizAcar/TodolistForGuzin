@@ -3,7 +3,7 @@
 Buzdolabındaki post-it'lerle yapılacaklar listesi ve akşamları süslenen tatlı bir oda.
 
 - **Buzdolabı:** Güzin günün yapacaklarını post-it olarak yapıştırır. Biten nota dokununca koparıp atar, **+1 ♡** kazanır. En az 3 notun hepsi bitince **+3 ♡** bonus gelir. "↻ Her gün" işaretli notlar her sabah yeniden çıkar.
-- **Dekorasyon:** Liste bitince **ve** akşam saati gelince (varsayılan 18:00) açılır. Kalplerle dükkandan eşya, duvar kağıdı ve zemin alınır, eşyalar sürükleyip yerleştirilir.
+- **Dekorasyon:** Liste bitince **ya da** günde 5 not bitirince, akşam saati gelince (varsayılan 18:00) açılır. O gün bir kez açılınca yeni not eklense de açık kalır. Kalplerle dükkandan eşya, duvar kağıdı ve zemin alınır, eşyalar sürükleyip yerleştirilir.
 - **Mektuplar:** Deniz panelden mektup yazar, içine kalp ya da sadece ondan gelen eşyalar (gül buketi, kalp balon, neon G ♡ D) koyar. Mektup kapının önünde zarf olarak belirir. İstersen ileri bir tarihe zamanlayabilirsin.
 - **Kapı tabelası:** Güzin ders çalışırken kapıdaki "Güzin" tabelasına dokunur, tabela sallanıp **DO NOT DISTURB** yüzüne döner. Deniz panelinde "ders çalışıyor, rahatsız etme" diye görünür. Unutulursa 12 saat sonra kendiliğinden düşer.
 - **Odak sayacı ve çalışma geçmişi:** kalbin solundaki ⏱ dakika:saniye ayarlanabilen bir sayaç (25/50 dk odak, 10/5 dk mola ön ayarları). Odak sayacı başlayınca kapıya tabela asılır. Tabela her kaldırıldığında "14:05 – 15:30 · 1 sa 25 dk" gibi bir kayıt düşer; bugün ve son 7 günün toplamı görünür. Deniz panelinde de görünür.

@@ -57,7 +57,10 @@ export function fridgeList(S, day = dayKey(now())) {
   return { open: vis.filter(t => !isDone(t, day)), doneToday: vis.filter(t => isDone(t, day)) };
 }
 
-// Dekorasyon: liste bitince VE akşam saatinde açılır. Deniz o gün için kilidi açabilir.
+// Bir günde bu kadar not bitince, liste tamamen bitmese de dekorasyon şartı sağlanır.
+export const DONE_GOAL = 5;
+
+// Dekorasyon: (liste bitince YA DA günde 5 not bitince) VE akşam saatinde açılır. Deniz o gün için kilidi açabilir.
 export function unlockInfo(S, d = now()) {
   const day = dayKey(d);
   const { open, doneToday } = fridgeList(S, day);
@@ -68,7 +71,10 @@ export function unlockInfo(S, d = now()) {
   const gift = !!S.unlock?.[day];
   // Bugün bir kez açıldıysa sonradan not eklense de gün boyu açık kalır.
   const earned = !!S.opened?.[day];
-  return { day, open, doneToday, hour, listOk, timeOk, gift, earned, unlocked: gift || earned || (listOk && timeOk) };
+  // Görev şartı: liste bitti YA DA bugün en az DONE_GOAL not bitirildi.
+  const goal = doneToday.length >= DONE_GOAL;
+  const taskOk = listOk || goal;
+  return { day, open, doneToday, hour, listOk, goal, taskOk, timeOk, gift, earned, unlocked: gift || earned || (taskOk && timeOk) };
 }
 
 // "saat 18:00'de", "saat 19:00'da", "saat 15:00'te" (Türkçe ek uyumu).
